@@ -1,0 +1,15 @@
+{
+  "short_name": "MicroFinanceHub",
+  "name": "MicroFinanceHub — Gestion Microfinance",
+  "icons": [
+    {
+      "src": "logo11.PNG",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#1e3a8a",
+  "background_color": "#ffffff"
+}

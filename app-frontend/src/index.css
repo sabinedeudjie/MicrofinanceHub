@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Styles de base globaux */
+body {
+  background-color: #f1f5f9;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  color: #1e293b;
+}
+
+/* Barre de défilement personnalisée */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+/* Utilitaires personnalisés pour les composants répétitifs */
+@layer components {
+  /* Carte blanche avec ombre légère */
+  .card {
+    @apply bg-white rounded-xl shadow-sm p-6;
+  }
+
+  /* Bouton principal bleu */
+  .btn-primary {
+    @apply bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium
+           hover:bg-primary-dark transition-colors duration-150;
+  }
+
+  /* Bouton secondaire (bordure bleue) */
+  .btn-secondary {
+    @apply border border-primary text-primary px-4 py-2 rounded-lg text-sm font-medium
+           hover:bg-blue-50 transition-colors duration-150;
+  }
+
+  /* Bouton danger (rouge) */
+  .btn-danger {
+    @apply bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium
+           hover:bg-red-600 transition-colors duration-150;
+  }
+
+  /* Bouton succès (vert) */
+  .btn-success {
+    @apply bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium
+           hover:bg-green-600 transition-colors duration-150;
+  }
+
+  /* Champ de formulaire standard */
+  .form-input {
+    @apply w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm
+           focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+           transition-colors duration-150 bg-gray-50;
+  }
+
+  /* Label de formulaire */
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 mb-1.5;
+  }
+
+  /* Conteneur de tableau responsive */
+  .table-container {
+    @apply w-full overflow-x-auto;
+  }
+}
