@@ -10,7 +10,6 @@ target/
 *.jar
 *.war
 *.ear
-*.log
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
@@ -21,7 +20,6 @@ target/
 *.iml
 *.ipr
 out/
-.DS_Store
 
 # Eclipse
 .apt_generated
@@ -51,3 +49,7 @@ spring.log
 # OS
 .DS_Store
 Thumbs.db
+
+# Doc
+generate_rapport.py
+Rapport_MicrofinanceHub.docx
