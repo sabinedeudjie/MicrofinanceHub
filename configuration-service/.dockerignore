@@ -1,0 +1,11 @@
+target/
+*.log
+*.class
+.git
+.gitignore
+.gitattributes
+.idea
+.vscode
+.mvn/wrapper/maven-wrapper.jar
+HELP.md
+mvnw.cmd

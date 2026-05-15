@@ -1,0 +1,10 @@
+CREATE DATABASE microfinancehub_auth;
+CREATE DATABASE microfinancehub_client;
+CREATE DATABASE microfinancehub_account;
+CREATE DATABASE microfinancehub_loan;
+CREATE DATABASE microfinancehub_repayment;
+CREATE DATABASE microfinancehub_reporting;
+CREATE DATABASE microfinancehub_agency;
+CREATE DATABASE microfinancehub_configuration;
+CREATE DATABASE microfinancehub_transaction;
+CREATE DATABASE microfinancehub_notification;

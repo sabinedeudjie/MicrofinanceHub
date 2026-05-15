@@ -1,0 +1,53 @@
+# Secrets — ne jamais commiter
+.env
+*.env
+.env.*
+!.env.example
+
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+.DS_Store
+
+# Eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Node.js / React frontend
+app-frontend/node_modules/
+app-frontend/build/
+app-frontend/.env
+app-frontend/.env.local
+app-frontend/.env.production
+
+# Logs
+logs/
+*.log
+spring.log
+
+# OS
+.DS_Store
+Thumbs.db

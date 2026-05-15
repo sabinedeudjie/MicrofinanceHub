@@ -1,0 +1,46 @@
+# =============================================================================
+# .dockerignore RACINE
+# Ce fichier est utilisé quand le contexte Docker est "." (la racine)
+# → Utilisé par : auth-service/Dockerfile et client-service/Dockerfile
+# On garde seulement : common-service/, auth-service/, client-service/ + credentials
+# =============================================================================
+
+# ── Exclure tous les autres services Java ─────────────────────────────────
+registry-service/
+config-service/
+api-gateway/
+account-service/
+loan-service/
+repayment-service/
+reporting-service/
+agency-service/
+configuration-service/
+transaction-service/
+notification-service/
+
+# ── Exclure le frontend et les données ────────────────────────────────────
+app-frontend/
+cloud-config/
+uploads/
+
+# ── Artefacts de build ─────────────────────────────────────────────────────
+**/target/
+**/node_modules/
+**/*.log
+**/*.class
+
+# ── Fichiers IDE / Git ─────────────────────────────────────────────────────
+**/.git
+**/.gitignore
+**/.gitattributes
+**/.idea
+**/.vscode
+**/.claude
+**/.mvn/wrapper/maven-wrapper.jar
+**/HELP.md
+**/mvnw.cmd
+
+# ── Variables d'environnement ──────────────────────────────────────────────
+.env
+
+# Note : le fichier microfinancehub-e942f8275ac4.json est INCLUS (volume dans docker-compose)

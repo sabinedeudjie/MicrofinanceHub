@@ -1,0 +1,12 @@
+// .java
+package org.example.notificationservice.model.enums;
+public enum TypeNotification {
+    // 
+    DEMANDE_PRET, APPROBATION_PRET, REJET_PRET, DECAISSEMENT,
+    // 
+    RAPPEL_ECHEANCE, CONFIRMATION_REMB, ALERTE_RETARD, PENALITE_APPLIQUEE,
+    // 
+    CREATION_COMPTE, DEPOT_EFFECTUE, RETRAIT_EFFECTUE,
+    // 
+    PROMOTION, NEWSLETTER, ALERTE_SYSTEME, ALERTE_SOLDE
+}

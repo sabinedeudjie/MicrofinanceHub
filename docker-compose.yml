@@ -1,0 +1,498 @@
+services:
+
+  # INFRASTRUCTURE
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    ports:
+      - "5433:5432"
+    networks:
+      - network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # Management UI → http://localhost:15672
+    networks:
+      - network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  config-service:
+    build:
+      context: ./config-service
+      dockerfile: Dockerfile
+    container_name: config-service
+    restart: unless-stopped
+    environment:
+      # Chemin vers les configs montées en volume
+      CONFIG_SEARCH_LOCATION: "file:///workspace/cloud-config/"
+      DOTENV_DIR: "/dev/null"
+    volumes:
+      # Monter le dossier cloud-config en lecture seule dans le container
+      - ./cloud-config:/workspace/cloud-config:ro
+    ports:
+      - "8000:8000"
+    networks:
+      - network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  registry-service:
+    build:
+      context: ./registry-service
+      dockerfile: Dockerfile
+    container_name: registry-service
+    restart: unless-stopped
+    environment:
+      CONFIG_SERVER_URL: "http://config-service:8000"
+      DOTENV_DIR: "/dev/null"
+    ports:
+      - "8761:8761"
+    networks:
+      - network
+    depends_on:
+      config-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 45s
+
+  # MICROSERVICES MÉTIER
+
+  auth-service:
+    build:
+      context: .                          # Racine (besoin de common-service)
+      dockerfile: auth-service/Dockerfile
+    container_name: auth-service
+    restart: unless-stopped
+    environment:
+      CONFIG_SERVER_URL: "http://config-service:8000"
+      EUREKA_URL: "http://registry-service:8761/eureka/"
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: "jdbc:postgresql://postgres:5432/microfinancehub_auth"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
+      FRONTEND_URL: "http://localhost:3000"
+      DOTENV_DIR: "/dev/null"
+    ports:
+      - "8080:8080"
+    networks:
+      - network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  client-service:
+    build:
+      context: .                             # Racine (besoin de common-service)
+      dockerfile: client-service/Dockerfile
+    container_name: client-service
+    restart: unless-stopped
+    environment:
+      CONFIG_SERVER_URL: "http://config-service:8000"
+      EUREKA_URL: "http://registry-service:8761/eureka/"
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: "jdbc:postgresql://postgres:5432/microfinancehub_client"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      CLOUDINARY_URL: ${CLOUDINARY_URL}
+      DOTENV_DIR: "/dev/null"
+    volumes:
+      - client_uploads:/app/uploads
+    ports:
+      - "8081:8081"
+    networks:
+      - network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  account-service:
+    build:
+      context: ./account-service
+      dockerfile: Dockerfile
+    container_name: account-service
+    restart: unless-stopped
+    environment:
+      CONFIG_SERVER_URL: "http://config-service:8000"
+      EUREKA_URL: "http://registry-service:8761/eureka/"
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: "jdbc:postgresql://postgres:5432/microfinancehub_account"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      ACCOUNT_SERVICE_URL: "http://account-service:8082"
+      DOTENV_DIR: "/dev/null"
+    ports:
+      - "8082:8082"
+    networks:
+      - network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+
+  loan-service:
+    build:
+      context: ./loan-service
+      dockerfile: Dockerfile
+    container_name: loan-service
+    restart: unless-stopped
+    environment:
+      CONFIG_SERVER_URL: "http://config-service:8000"
+      EUREKA_URL: "http://registry-service:8761/eureka/"
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: "jdbc:postgresql://postgres:5432/microfinancehub_loan"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      CLIENT_SERVICE_URL: "http://client-service:8081"
+      ACCOUNT_SERVICE_URL: "http://account-service:8082"
+      AGENCY_SERVICE_URL: "http://agency-service:8086"
+      DOTENV_DIR: "/dev/null"
+    ports:
+      - "8083:8083"
+    networks:
+      - network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+
+  repayment-service:
+    build:
+      context: ./repayment-service
+      dockerfile: Dockerfile
+    container_name: repayment-service
+    restart: unless-stopped
+    environment:
+      CONFIG_SERVER_URL: "http://config-service:8000"
+      EUREKA_URL: "http://registry-service:8761/eureka/"
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: "jdbc:postgresql://postgres:5432/microfinancehub_repayment"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      LOAN_SERVICE_URL: "http://loan-service:8083"
+      CLIENT_SERVICE_URL: "http://client-service:8081"
+      AGENCY_SERVICE_URL: "http://agency-service:8086"
+      TRANSACTION_SERVICE_URL: "http://transaction-service:8088"
+      DOTENV_DIR: "/dev/null"
+    ports:
+      - "8084:8084"
+    networks:
+      - network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+
+  reporting-service:
+    build:
+      context: ./reporting-service
+      dockerfile: Dockerfile
+    container_name: reporting-service
+    restart: unless-stopped
+    environment:
+      CONFIG_SERVER_URL: "http://config-service:8000"
+      EUREKA_URL: "http://registry-service:8761/eureka/"
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: "jdbc:postgresql://postgres:5432/microfinancehub_reporting"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      DOTENV_DIR: "/dev/null"
+    ports:
+      - "8085:8085"
+    networks:
+      - network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+
+  agency-service:
+    build:
+      context: ./agency-service
+      dockerfile: Dockerfile
+    container_name: agency-service
+    restart: unless-stopped
+    environment:
+      CONFIG_SERVER_URL: "http://config-service:8000"
+      EUREKA_URL: "http://registry-service:8761/eureka/"
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: "jdbc:postgresql://postgres:5432/microfinancehub_agency"
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      CLIENT_SERVICE_URL: "http://client-service:8081"
+      ACCOUNT_SERVICE_URL: "http://account-service:8082"
+      DOTENV_DIR: "/dev/null"
+    ports:
+      - "8086:8086"
+    networks:
+      - network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+
+  configuration-service:
+    build:
+      context: ./configuration-service
+      dockerfile: Dockerfile
+    container_name: configuration-service
+    restart: unless-stopped
+    environment:
+      CONFIG_SERVER_URL: "http://config-service:8000"
+      EUREKA_URL: "http://registry-service:8761/eureka/"
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: "jdbc:postgresql://postgres:5432/microfinancehub_configuration"
+      JWT_SECRET: ${JWT_SECRET}
+      DOTENV_DIR: "/dev/null"
+    ports:
+      - "8087:8087"
+    networks:
+      - network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+
+  transaction-service:
+    build:
+      context: ./transaction-service
+      dockerfile: Dockerfile
+    container_name: transaction-service
+    restart: unless-stopped
+    environment:
+      CONFIG_SERVER_URL: "http://config-service:8000"
+      EUREKA_URL: "http://registry-service:8761/eureka/"
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: "jdbc:postgresql://postgres:5432/microfinancehub_transaction"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      ACCOUNT_SERVICE_URL: "http://account-service:8082"
+      CAMPAY_BASE_URL: ${CAMPAY_BASE_URL}
+      CAMPAY_USERNAME: ${CAMPAY_USERNAME}
+      CAMPAY_PASSWORD: ${CAMPAY_PASSWORD}
+      CAMPAY_WEBHOOK_KEY: ${CAMPAY_WEBHOOK_KEY}
+      CAMPAY_PERMANENT_TOKEN: ${CAMPAY_PERMANENT_TOKEN}
+      DOTENV_DIR: "/dev/null"
+    ports:
+      - "8088:8088"
+    networks:
+      - network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    restart: unless-stopped
+    environment:
+      CONFIG_SERVER_URL: "http://config-service:8000"
+      EUREKA_URL: "http://registry-service:8761/eureka/"
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: "jdbc:postgresql://postgres:5432/microfinancehub_notification"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      SMS_FROM: ${SMS_FROM}
+      DOTENV_DIR: "/dev/null"
+    ports:
+      - "8089:8089"
+    networks:
+      - network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+
+  # GATEWAY ET FRONTEND
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    restart: unless-stopped
+    environment:
+      CONFIG_SERVER_URL: "http://config-service:8000"
+      EUREKA_URL: "http://registry-service:8761/eureka/"
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_HOST: redis
+      DOTENV_DIR: "/dev/null"
+    ports:
+      - "8091:8091"
+    networks:
+      - network
+    depends_on:
+      redis:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+
+  app-frontend:
+    build:
+      context: ./app-frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"       # Frontend accessible sur http://localhost:3000
+    networks:
+      - network
+    depends_on:
+      - api-gateway
+
+# =============================================================================
+# VOLUMES PERSISTANTS
+# =============================================================================
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  redis_data:
+  client_uploads:
+
+# =============================================================================
+# RÉSEAU INTERNE
+# =============================================================================
+networks:
+  network:
+    driver: bridge

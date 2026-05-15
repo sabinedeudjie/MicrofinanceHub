@@ -1,0 +1,30 @@
+package org.example.repaymentservice.events;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class LoanApprovedEvent {
+    
+    private String loanId;
+    private String loanNumber;
+    private String clientId;
+    private String clientEmail;
+    private String clientFirstName;
+    private String clientLastName;
+    private BigDecimal amount;
+    private BigDecimal monthlyPayment;
+    private Integer termMonths;
+    private BigDecimal interestRate;
+    private LocalDateTime timestamp;
+    @Builder.Default
+    private String eventType = "LOAN_APPROVED";
+}
