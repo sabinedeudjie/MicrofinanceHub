@@ -66,7 +66,6 @@ BigDecimal sumRepaidAmountByStatus(@Param("status") LoanStatus status);
 @Query("SELECT COALESCE(SUM(l.monthlyPayment), 0) FROM Loan l WHERE l.nextPaymentDate IS NOT NULL AND l.nextPaymentDate < :date AND l.status = 'ACTIVE'")
 BigDecimal sumMonthlyPaymentByNextPaymentDateBefore(@Param("date") LocalDateTime date);
 
-    //  PAR STATUT POUR PLUSIEURS CLIENTS
     @Query("SELECT COUNT(l) FROM Loan l WHERE l.clientId IN :clientIds AND l.status = :status")
     Long countByClientIdInAndStatus(
             @Param("clientIds") List<String> clientIds,
@@ -79,12 +78,8 @@ BigDecimal sumMonthlyPaymentByNextPaymentDateBefore(@Param("date") LocalDateTime
 
   Page<Loan> findByClientIdInAndStatus(List<String> clientIds, LoanStatus status, Pageable pageable);
 
-  // 
-//  POUR LISTE DE CLIENTS
-// 
-
 /**
- * Trouve les prêts par liste d'IDs clients et statut
+ // Trouve les prêts par liste d'IDs clients et statut
  */
 @Query("SELECT l FROM Loan l WHERE l.clientId IN :clientIds AND l.status = :status")
 List<Loan> findByClientIdInAndStatus(@Param("clientIds") List<String> clientIds, 

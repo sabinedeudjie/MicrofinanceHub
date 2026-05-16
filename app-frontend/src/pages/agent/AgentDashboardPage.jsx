@@ -94,7 +94,7 @@ const AgentDashboardPage = () => {
           <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-blue-100">
             <span className="flex items-center gap-1.5">
               <Building2 size={14} />
-              {agencyInfo.agencyCode ? `${agencyInfo.agencyName} (${agencyInfo.agencyCode})` : agencyInfo.agencyName}
+              {agencyInfo.agencyCode ? `${agencyInfo.agencyName}` : agencyInfo.agencyName}
             </span>
             {agencyInfo.directorName && (
               <span className="flex items-center gap-1.5">

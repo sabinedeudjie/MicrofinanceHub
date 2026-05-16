@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 @Builder
 public class TransactionEffectueeEvent {
     private EventType eventType;
-    /** Même valeur qu'eventType en String — utilisé par notification-service (champ typeEvent de CompteEvent) */
     private String typeEvent;
     private Long transactionId;
     private Long compteId;
@@ -24,7 +23,6 @@ public class TransactionEffectueeEvent {
     private String compteContrepartie;
     /** Nom du titulaire de la contrepartie (expéditeur pour VIREMENT_ENTRANT) */
     private String nomContrepartie;
-    /** Type du compte concerné (EPARGNE, COURANT, …) */
     private String typeCompte;
     private BigDecimal montant;
     private BigDecimal soldeApres;

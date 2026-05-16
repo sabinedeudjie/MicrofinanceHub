@@ -58,7 +58,7 @@ const DirecteurDashboardPage = () => {
       <div>
         <h1 className="text-2xl font-bold text-gray-800">{greeting}</h1>
         <p className="text-gray-500 text-sm">
-          {agency ? `${agency.code} — ${agency.name}` : 'Vue d\'ensemble de votre agence'}
+          {agency ? `${agency.name}` : 'Vue d\'ensemble de votre agence'}
         </p>
       </div>
 

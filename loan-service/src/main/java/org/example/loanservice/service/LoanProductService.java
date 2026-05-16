@@ -126,21 +126,13 @@ public class LoanProductService {
         loanProductRepository.delete(product);
     }
 
-    /**
-     * Récupère l'entité LoanProduct par son ID
-     * @param productId ID du produit
-     * @return LoanProduct ou null si non trouvé
-     */
     public LoanProduct getProductEntity(String productId) {
         if (productId == null || productId.isEmpty()) {
             return null;
         }
         return loanProductRepository.findById(productId).orElse(null);
     }
-    
-    /**
-     * Récupère l'entité LoanProduct par son ID (avec exception si non trouvé)
-     */
+
     public LoanProduct getProductEntityOrThrow(String productId) {
         return loanProductRepository.findById(productId)
             .orElseThrow(() -> new LoanProductNotFoundException(productId));

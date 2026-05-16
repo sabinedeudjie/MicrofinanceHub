@@ -31,8 +31,6 @@ public class TransactionController {
 
     private final TransactionService transactionService;
 
-    // ───  ─────────────────────────────────────────────────────────────
-
     @Operation(summary = "Effectuer un dépôt")
     @PostMapping("/depot/{compteId}")
     public ResponseEntity<ApiResponse<TransactionResponse>> effectuerDepot(
@@ -68,8 +66,6 @@ public class TransactionController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Virement de " + request.getMontant() + " XAF effectué", tx));
     }
-
-    // ───  par compte ───────────────────────────────────────────────────
 
     @Operation(summary = "Historique des transactions d'un compte")
     @GetMapping("/compte/{compteId}")
@@ -112,8 +108,6 @@ public class TransactionController {
     public ResponseEntity<ApiResponse<Long>> compterTransactions(@PathVariable Long compteId) {
         return ResponseEntity.ok(ApiResponse.success("Nombre de transactions", transactionService.compterTransactions(compteId)));
     }
-
-    // ───  admin ───────────────────────────────────────────────────────
 
     @Operation(summary = "Transactions par statut — supervision")
     @GetMapping("/statut/{statut}")

@@ -27,17 +27,11 @@ public class EligibilityService {
     private static final int MIN_TERM_MONTHS = 1;
     private static final int MIN_CREDIT_SCORE = 60;
     
-    /**
-     * Vérifie l'éligibilité d'un client avec un compte spécifique
-     */
-    public EligibilityResponse checkEligibility(String clientId, String accountNumber, 
+    public EligibilityResponse checkEligibility(String clientId, String accountNumber,
                                                  BigDecimal requestedAmount, Integer termMonths, 
                                                  String token) {
         log.info("d'éligibilité pour le client: {}, compte: {}", clientId, accountNumber);
         
-        // 
-        //  1: Vérifier que le client existe et récupérer ses infos
-        // 
         ClientInfo clientInfo = null;
         try {
             clientInfo = clientServiceClient.getClientInfo(clientId, token);
@@ -60,9 +54,6 @@ public class EligibilityService {
                 .build();
         }
         
-        // 
-        //  2: Vérifier que le compte existe et appartient au client
-        // 
         AccountInfo account = null;
         try {
             account = accountServiceClient.getAccountByNumber(accountNumber, token);
@@ -75,7 +66,6 @@ public class EligibilityService {
                     .build();
             }
             
-            //  que le compte appartient au client
             if (!account.getClientId().equals(clientId)) {
                 return EligibilityResponse.builder()
                     .eligible(false)
@@ -84,7 +74,6 @@ public class EligibilityService {
                     .build();
             }
             
-            //  que le compte est actif
             if (!"ACTIVE".equals(account.getStatus())) {
                 return EligibilityResponse.builder()
                     .eligible(false)
@@ -130,9 +119,6 @@ public class EligibilityService {
                 .build();
         }
         
-        // 
-        //  3: Vérifier les montants
-        // 
         if (requestedAmount.compareTo(MIN_LOAN_AMOUNT) < 0) {
             return EligibilityResponse.builder()
                 .eligible(false)
@@ -147,9 +133,6 @@ public class EligibilityService {
                 .build();
         }
         
-        // 
-        //  4: Vérifier la durée
-        // 
         if (termMonths < MIN_TERM_MONTHS || termMonths > MAX_TERM_MONTHS) {
             return EligibilityResponse.builder()
                 .eligible(false)
@@ -157,9 +140,6 @@ public class EligibilityService {
                 .build();
         }
         
-        // 
-        //  5: Vérifier le score de crédit
-        // 
         Integer creditScore = null;
         try {
             creditScore = clientServiceClient.getClientCreditScore(clientId, token);
@@ -189,15 +169,6 @@ public class EligibilityService {
                 .build();
         }
         
-        // 
-        //  6: Vérifier les prêts actifs existants
-        // 
-        //  vérification pourrait être ajoutée via un appel au Loan Service lui-même
-        //  la récursion en appelant directement le repository si nécessaire
-        
-        // 
-        //  7: Client éligible
-        // 
         BigDecimal maxEligibleAmount = calculateMaxEligibleAmount(creditScore);
         
         return EligibilityResponse.builder()
@@ -213,9 +184,6 @@ public class EligibilityService {
             .build();
     }
     
-    /**
-     * Calcule le montant maximum éligible en fonction du score de crédit
-     */
     private BigDecimal calculateMaxEligibleAmount(Integer creditScore) {
         if (creditScore == null) return BigDecimal.ZERO;
         if (creditScore >= 80) {
@@ -228,11 +196,7 @@ public class EligibilityService {
         return BigDecimal.ZERO;
     }
     
-    /**
-     * Vérifie l'éligibilité sans numéro de compte spécifique
-     * Récupère automatiquement le premier compte actif du client
-     */
-    public EligibilityResponse checkEligibility(String clientId, BigDecimal requestedAmount, 
+    public EligibilityResponse checkEligibility(String clientId, BigDecimal requestedAmount,
                                                  Integer termMonths, String token) {
         log.info("d'éligibilité pour le client: {}, montant: {}, durée: {}", 
             clientId, requestedAmount, termMonths);
@@ -247,7 +211,6 @@ public class EligibilityService {
                 .build();
         }
 
-        // . Trouver le premier compte actif
         String activeAccountNumber = accounts.stream()
             .filter(a -> "ACTIVE".equals(a.getStatus()))
             .map(AccountInfo::getAccountNumber)
@@ -264,31 +227,23 @@ public class EligibilityService {
 
         log.info("actif trouvé: {}", activeAccountNumber);
 
-        // . Appeler la méthode complète avec le numéro de compte
         return checkEligibility(clientId, activeAccountNumber, requestedAmount, termMonths, token);
     }
     
-    /**
-     * Vérifie si un client est éligible pour un prêt (version simplifiée)
-     * @return true si éligible, false sinon
-     */
     public boolean isEligible(String clientId, String token) {
         try {
-            //  les informations du client
             ClientInfo clientInfo = clientServiceClient.getClientInfo(clientId, token);
             if (clientInfo == null) {
                 log.warn("non trouvé: {}", clientId);
                 return false;
             }
             
-            //  le score de crédit
             Integer creditScore = clientServiceClient.getClientCreditScore(clientId, token);
             if (creditScore == null || creditScore < MIN_CREDIT_SCORE) {
                 log.warn("de crédit insuffisant pour client {}: {}", clientId, creditScore);
                 return false;
             }
             
-            //  l'existence d'un compte actif
             List<AccountInfo> accounts = accountServiceClient.getAccountsByClientId(clientId, token);
             boolean hasActiveAccount = accounts != null && accounts.stream()
                 .anyMatch(a -> "ACTIVE".equals(a.getStatus()));
@@ -308,8 +263,7 @@ public class EligibilityService {
     private String extractErrorMessage(FeignException e) {
     try {
         if (e.contentUTF8() != null && !e.contentUTF8().isEmpty()) {
-            //  de parser le JSON d'erreur
-            com.fasterxml.jackson.databind.ObjectMapper mapper = 
+            com.fasterxml.jackson.databind.ObjectMapper mapper =
                 new com.fasterxml.jackson.databind.ObjectMapper();
             com.fasterxml.jackson.databind.JsonNode node = 
                 mapper.readTree(e.contentUTF8());
@@ -324,7 +278,6 @@ public class EligibilityService {
         log.debug("de parser l'erreur: {}", ex.getMessage());
     }
     
-    //  par défaut basé sur le code HTTP
     switch (e.status()) {
         case 404:
             return "Ressource non trouvée";

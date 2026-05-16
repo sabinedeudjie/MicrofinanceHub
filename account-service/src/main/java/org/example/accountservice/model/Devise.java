@@ -1,8 +1,8 @@
 package org.example.accountservice.model;
 
 public enum Devise {
-    XAF,  //  CFA d'Afrique Centrale (Cameroun, Congo, Gabon...)
-    XOF,  //  CFA d'Afrique de l'Ouest (Sénégal, Côte d'Ivoire...)
+    XAF,  //
+    XOF,  //
     EUR,  // 
     USD,  //  américain
     GBP,  //  sterling

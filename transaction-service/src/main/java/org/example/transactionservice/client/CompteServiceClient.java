@@ -33,8 +33,6 @@ public class CompteServiceClient {
 
     private static final RestClient REST_CLIENT = RestClient.create();
 
-    // ───  ────────────────────────────────────────────────────────────────
-
     public CompteInfo getCompteById(Long compteId) {
         try {
             String json = REST_CLIENT.get()
@@ -85,10 +83,6 @@ public class CompteServiceClient {
 
             JsonNode root = objectMapper.readTree(json);
             if (root.isArray() && root.size() > 0) {
-                // On prend le premier compte pour avoir les infos client (email, nom)
-                // Note: InternalCompteController returns a list of Maps, we need to adapt parseCompteInfo or use it.
-                // But parseCompteInfo expects a { data: { ... } } structure.
-                // Here it's a direct array of objects.
                 JsonNode firstCompte = root.get(0);
                 CompteInfo info = new CompteInfo();
                 info.setClientId(Long.parseLong(clientId));
@@ -108,8 +102,6 @@ public class CompteServiceClient {
             return null;
         }
     }
-
-    // ───  ──────────────────────────────────────────────────────────────
 
     public void crediterCompte(Long compteId, BigDecimal montant) {
         try {
@@ -144,8 +136,6 @@ public class CompteServiceClient {
             throw new OperationInvalideException("Impossible de débiter le compte : " + e.getMessage());
         }
     }
-
-    // ───  ─────────────────────────────────────────────────────────────────
 
     private CompteInfo parseCompteInfo(String json) {
         try {

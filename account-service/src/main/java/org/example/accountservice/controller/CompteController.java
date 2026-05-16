@@ -30,9 +30,6 @@ public class CompteController {
 
     private final CompteService compteService;
 
-    // 
-    //  DES COMPTES
-    // 
 
     @PostMapping
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN', 'DIRECTEUR_AGENCE')")
@@ -154,7 +151,7 @@ public class CompteController {
     }
 
     // 
-    //  INTERNES — réservés à transaction-service
+    //  INTERNES
     // 
 
     @Operation(

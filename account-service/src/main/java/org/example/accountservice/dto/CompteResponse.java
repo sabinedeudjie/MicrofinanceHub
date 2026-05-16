@@ -11,10 +11,6 @@ import org.example.accountservice.model.TypeCompte;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * DTO de réponse pour un compte.
- * Renvoyé par l'API sans exposer les données internes JPA.
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

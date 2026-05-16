@@ -79,9 +79,6 @@ public class Compte {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // 
-    //  MÉTIER
-    // 
 
     /** Vérifie si le compte peut effectuer des opérations */
     public boolean isOperationnel() {

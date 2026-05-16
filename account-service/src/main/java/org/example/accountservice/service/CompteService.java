@@ -31,10 +31,6 @@ public class CompteService {
 
     private final AtomicLong refCounter = new AtomicLong(0);
 
-    // 
-    //  DES COMPTES
-    // 
-
     public CompteResponse ouvrirCompte(OuvrirCompteRequest request) {
         log.info("d'un compte {} pour le client {}", request.getTypeCompte(), request.getClientId());
 
@@ -186,9 +182,7 @@ public class CompteService {
         return mapToCompteResponse(saved);
     }
 
-    // 
-    //  INTERNES — appelés par transaction-service
-    // 
+    //  INTERNES
 
     @Transactional
     public CompteResponse crediterInterne(Long compteId, BigDecimal montant) {
@@ -206,9 +200,6 @@ public class CompteService {
         return mapToCompteResponse(compteRepository.save(compte));
     }
 
-    // 
-    //  AVANCÉES
-    // 
 
     @Transactional(readOnly = true)
     public Page<CompteResponse> getComptesEnAttenteValidation(Pageable pageable) {
@@ -255,9 +246,7 @@ public class CompteService {
         return total != null ? total : BigDecimal.ZERO;
     }
 
-    // 
     //  PRIVÉES
-    // 
 
     private Compte findCompteOrThrow(Long id) {
         return compteRepository.findById(id).orElseThrow(() -> new CompteNotFoundException(id));

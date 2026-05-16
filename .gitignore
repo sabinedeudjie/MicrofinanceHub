@@ -43,7 +43,6 @@ app-frontend/.env.production
 
 # Logs
 logs/
-*.log
 spring.log
 
 # OS

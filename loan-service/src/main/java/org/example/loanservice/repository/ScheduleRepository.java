@@ -26,33 +26,3 @@ public interface ScheduleRepository extends JpaRepository<AmortizationSchedule, 
     @Query("DELETE FROM AmortizationSchedule s WHERE s.loan.id = :loanId")
     void deleteByLoanId(@Param("loanId") String loanId);
 }
-
-
-//  org.example.loanservice.repository;
-
-//  org.example.loanservice.model.Schedule;
-//  org.example.loanservice.model.enums.ScheduleStatus;
-//  org.springframework.data.jpa.repository.JpaRepository;
-//  org.springframework.stereotype.Repository;
-
-//  java.time.LocalDateTime;
-//  java.util.List;
-//  java.util.Optional;
-
-// 
-//  interface ScheduleRepository extends JpaRepository<Schedule, String> {
-    
-//      findByLoanIdOrderByInstallmentNumberAsc(String loanId);
-    
-//      findByLoanIdAndStatusOrderByDueDateAsc(String loanId, ScheduleStatus status);
-    
-//      findByDueDateBeforeAndStatus(LocalDateTime date, ScheduleStatus status);
-    
-//      findByLoanIdAndInstallmentNumber(String loanId, Integer installmentNumber);
-    
-//      countByLoanId(String loanId);
-    
-//      countByLoanIdAndStatus(String loanId, ScheduleStatus status);
-    
-//      deleteByLoanId(String loanId);
-// 

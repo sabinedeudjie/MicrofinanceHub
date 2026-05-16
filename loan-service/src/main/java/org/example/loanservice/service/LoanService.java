@@ -61,7 +61,6 @@ public class LoanService {
     public LoanApplicationResponse applyForLoan(LoanApplicationRequest request, String userId, String token) {
         log.info("Nouvelle demande de pret pour le client: {}", request.getClientId());
         
-        // . Récupérer les vraies informations du client depuis Client Service
         ClientInfo clientInfo = null;
         try {
             clientInfo = clientServiceClient.getClientInfo(request.getClientId(), token);
@@ -77,8 +76,7 @@ public class LoanService {
             log.error("de récupérer les infos du client: {}", e.getMessage());
             throw new RuntimeException("Client non trouvé: " + e.getMessage());
         }
-        
-        // . Vérifier l'éligibilité
+
         EligibilityResponse eligibility = eligibilityService.checkEligibility(
             request.getClientId(),
             request.getAccountNumber(),
@@ -90,8 +88,7 @@ public class LoanService {
         if (!eligibility.isEligible()) {
             throw new IneligibleClientException(eligibility.getMessage());
         }
-        
-        // . Vérifier les prêts actifs
+
         long activeLoans = loanRepository.countByClientIdAndStatus(
             request.getClientId(), 
             LoanStatus.ACTIVE
@@ -100,8 +97,7 @@ public class LoanService {
         if (activeLoans >= 3) {
             throw new IneligibleClientException("Maximum 3 prêts actifs simultanément");
         }
-        
-        // . Créer la demande avec les vraies informations
+
         LoanApplication application = LoanApplication.builder()
             .clientId(request.getClientId())
             .accountNumber(request.getAccountNumber()) 
@@ -126,14 +122,10 @@ public class LoanService {
     
    @Transactional
 public LoanResponse approveLoan(String applicationId, String approvedBy, String token) {
-    log.info("╔════════════════════════════════════════════════════════════════╗");
     log.info("║                    APPROBATION DE PRÊT                         ║");
-    log.info("╠════════════════════════════════════════════════════════════════╣");
     log.info("║ Application ID: {}", applicationId);
     log.info("║ Approuvé par   : {}", approvedBy);
-    log.info("╚════════════════════════════════════════════════════════════════╝");
-    
-    // . Récupérer la demande
+
     log.info("/7] Récupération de la demande...");
     LoanApplication application = loanApplicationRepository.findById(applicationId)
         .orElseThrow(() -> {
@@ -142,7 +134,6 @@ public LoanResponse approveLoan(String applicationId, String approvedBy, String 
         });
     log.info("trouvée pour le client: {}", application.getClientId());
     
-    // . Vérifier le statut
     log.info("/7] Vérification du statut...");
     if (application.getStatus() != ApplicationStatus.PENDING) {
         log.error("déjà traitée - Statut actuel: {}", application.getStatus());
@@ -150,7 +141,6 @@ public LoanResponse approveLoan(String applicationId, String approvedBy, String 
     }
     log.info("PENDING - Traitement possible");
     
-    // . Vérifier l'éligibilité
     log.info("/7] Vérification de l'éligibilité...");
     EligibilityResponse eligibility = eligibilityService.checkEligibility(
         application.getClientId(),
@@ -175,7 +165,6 @@ public LoanResponse approveLoan(String applicationId, String approvedBy, String 
         log.info("validé pour le client");
     } catch (FeignException e) {
         log.error("lors de la vérification du compte: {}", e.getMessage());
-        //  quand même, c'est peut-être un faux positif
     }
     
     if (!eligibility.isEligible()) {
@@ -189,7 +178,6 @@ public LoanResponse approveLoan(String applicationId, String approvedBy, String 
     }
     log.info("éligible");
     
-    // . Calculer les mensualités
     log.info("/7] Calcul des mensualités...");
     BigDecimal interestRate = new BigDecimal("0.15"); // % par an
     BigDecimal monthlyInterestRate = interestRate.divide(new BigDecimal("12"), 10, RoundingMode.HALF_UP);
@@ -201,8 +189,7 @@ public LoanResponse approveLoan(String applicationId, String approvedBy, String 
     BigDecimal totalRepayment = monthlyPayment.multiply(BigDecimal.valueOf(application.getTermMonths()));
     log.info("calculée: {} FCFA", monthlyPayment);
     log.info("   Total à rembourser: {} FCFA", totalRepayment);
-    
-    // . Créer le prêt
+
     log.info("/7] Création du prêt...");
     Loan loan = Loan.builder()
         .clientId(application.getClientId())
@@ -226,16 +213,14 @@ public LoanResponse approveLoan(String applicationId, String approvedBy, String 
     
     loan = loanRepository.save(loan);
     log.info("créé avec ID: {}, Numéro: {}", loan.getId(), loan.getLoanNumber());
-    
-    // . Mettre à jour la demande
+
     log.info("/7] Mise à jour de la demande...");
     application.setStatus(ApplicationStatus.APPROVED);
     application.setReviewedDate(LocalDateTime.now());
     application.setReviewedBy(approvedBy);
     loanApplicationRepository.save(application);
     log.info("mise à jour - Statut: APPROVED, Revue par: {}", approvedBy);
-    
-    // . Générer le plan d'amortissement
+
     log.info("/7] Génération du plan d'amortissement...");
     amortizationService.generateAmortizationSchedule(loan);
     log.info("Plan d'amortissement genere");
@@ -263,8 +248,7 @@ public void rejectLoan(String applicationId, String rejectionReason, String revi
     application.setReviewedDate(LocalDateTime.now());
     application.setReviewedBy(reviewedBy);
     loanApplicationRepository.save(application);
-    
-    //  événement
+
     eventPublisher.publishLoanRejected(application);
     
     log.info("rejetée avec succès: {} par {}", applicationId, reviewedBy);
@@ -287,11 +271,9 @@ public LoanResponse disburseLoan(String loanId, String disbursedBy) {
     loan.setNextPaymentDate(LocalDateTime.now().plusMonths(1));
     loan.setMaturityDate(LocalDateTime.now().plusMonths(loan.getTermMonths()));
     loan = loanRepository.save(loan);
-    
-    //  le plan d'amortissement (schedules)
+
     scheduleManagementService.generateSchedules(loanId);
-    
-    //  événement
+
     eventPublisher.publishLoanDisbursed(loan);
     
     return mapToLoanResponse(loan);
@@ -408,9 +390,8 @@ public LoanResponse disburseLoan(String loanId, String disbursedBy) {
             .build();
     }
 
-    /**
- * Vérifie si un utilisateur a le droit d'approuver/rejeter une demande
- */
+ // Vérifie si un utilisateur a le droit d'approuver/rejeter une demande
+
 private void checkApprovalAuthorization(String applicationId, String userEmail, String userRole, String token) {
     log.info(" Vérification des droits pour l'utilisateur: {} (rôle: {})", userEmail, userRole);
 
@@ -420,7 +401,7 @@ private void checkApprovalAuthorization(String applicationId, String userEmail, 
         return;
     }
     
-    // . Récupérer la demande de prêt
+    // Récupérer la demande de prêt
     LoanApplication application = loanApplicationRepository.findById(applicationId)
         .orElseThrow(() -> new RuntimeException("Demande non trouvée: " + applicationId));
     
@@ -430,10 +411,9 @@ private void checkApprovalAuthorization(String applicationId, String userEmail, 
     log.info("concerné par la demande: {}", clientId);
     log.info("utilisé pour la demande: {}", accountNumber);
     
-    // . Récupérer l'agence à partir du compte SPÉCIFIQUE utilisé pour la demande
+    // Récupérer l'agence à partir du compte SPÉCIFIQUE utilisé pour la demande
     String clientAgencyId = null;
     try {
-        //   le numéro de compte spécifique, pas le premier compte du client
         AccountInfo account = accountServiceClient.getAccountByNumber(accountNumber, token);
         if (account != null) {
             clientAgencyId = account.getAgencyId();
@@ -450,7 +430,6 @@ private void checkApprovalAuthorization(String applicationId, String userEmail, 
     String normalizedRole = userRole != null ? userRole.trim().toUpperCase() : "";
 
     if (clientAgencyId == null) {
-        // Les comptes n'ont pas d'agence assignée dans ce système — on autorise DIRECTEUR_AGENCE et AGENT
         log.warn("Compte {} sans agence assignée — vérification d'agence ignorée pour rôle {}", accountNumber, userRole);
         if ("DIRECTEUR_AGENCE".equals(normalizedRole) || "AGENT".equals(normalizedRole)) {
             return;
@@ -477,10 +456,6 @@ private void checkApprovalAuthorization(String applicationId, String userEmail, 
         throw new RuntimeException("Rôle non autorisé pour approuver/rejeter un prêt");
     }
 }
-    
-    /**
-     * Vérifie si un directeur appartient à une agence
-     */
     private boolean checkDirectorBelongsToAgency(String directorEmail, String agencyId, String token) {
         try {
             AgencyResponse agency = agencyServiceClient.getAgencyByDirectorEmail(directorEmail, token);
@@ -490,10 +465,7 @@ private void checkApprovalAuthorization(String applicationId, String userEmail, 
             return false;
         }
     }
-    
-    /**
-     * Vérifie si un agent appartient à une agence (et est actif)
-     */
+
     private boolean checkAgentBelongsToAgency(String agentEmail, String agencyId, String token) {
         try {
             AgentAssignmentResponse assignment = agencyServiceClient.getAgentAssignmentByEmail(agentEmail, token);
@@ -504,18 +476,11 @@ private void checkApprovalAuthorization(String applicationId, String userEmail, 
         }
     }
 
-     /**
-     * Approuver un prêt avec vérification d'agence (UNIQUE MÉTHODE)
-     */
-
     @Transactional
     public LoanResponse approveLoan(String applicationId, String approvedBy, String userRole, String token, LoanApprovalRequest request) {
-    log.info("╔════════════════════════════════════════════════════════════════╗");
     log.info("║                    APPROBATION DE PRÊT                         ║");
-    log.info("╠════════════════════════════════════════════════════════════════╣");
     log.info("║ Application ID: {}", applicationId);
     log.info("║ Approuvé par   : {} (rôle: {})", approvedBy, userRole);
-    log.info("╚════════════════════════════════════════════════════════════════╝");
     
           //  SEULE VÉRIFICATION
           checkApprovalAuthorization(applicationId, approvedBy, userRole, token);
@@ -555,8 +520,7 @@ private void checkApprovalAuthorization(String applicationId, String userEmail, 
                 throw new RuntimeException("Client non éligible: " + eligibility.getMessage());
            }
     
-           //. Récupérer le taux d'intérêt : priorité à la saisie manuelle
-           BigDecimal interestRate = request.getInterestRate() != null 
+           BigDecimal interestRate = request.getInterestRate() != null
                ? request.getInterestRate() 
                : new BigDecimal("15.0"); 
            String productName = "Taux standard";
@@ -578,7 +542,6 @@ private void checkApprovalAuthorization(String applicationId, String userEmail, 
                                 requestedAmount, productName, loanProduct.getMinAmount(), loanProduct.getMaxAmount()));
                            }
                 
-                          //  que la durée est dans les limites du produit
                           Integer termMonths = application.getTermMonths();
                           if (termMonths < loanProduct.getMinTermMonths() ||
                                termMonths > loanProduct.getMaxTermMonths()) {
@@ -658,97 +621,8 @@ private void checkApprovalAuthorization(String applicationId, String userEmail, 
 
           return mapToLoanResponse(loan);
     }
-    
-    // 
-    //  LoanResponse approveLoan(String applicationId, String approvedBy, String userRole, String token) {
-    //     .info("╔════════════════════════════════════════════════════════════════╗");
-    //     .info("║                    APPROBATION DE PRÊT                         ║");
-    //     .info("╠════════════════════════════════════════════════════════════════╣");
-    //     .info("║ Application ID: {}", applicationId);
-    //     .info("║ Approuvé par   : {} (rôle: {})", approvedBy, userRole);
-    //     .info("╚════════════════════════════════════════════════════════════════╝");
-        
-    //     //  SEULE VÉRIFICATION
-    //     (applicationId, approvedBy, userRole, token);
-        
-    //     // . Récupérer la demande
-    //      application = loanApplicationRepository.findById(applicationId)
-    //         .(() -> new RuntimeException("Demande non trouvée"));
-        
-    //     // . Vérifier le statut
-    //      (application.getStatus() != ApplicationStatus.PENDING) {
-    //          new LoanAlreadyProcessedException(applicationId, application.getStatus().name());
-    //     
-        
-    //     // . Vérifier l'éligibilité
-    //      eligibility = eligibilityService.checkEligibility(
-    //         .getClientId(),
-    //         .getRequestedAmount(),
-    //         .getTermMonths(),
-    //         
-    //     )
-        
-    //      (!eligibility.isEligible()) {
-    //         .setStatus(ApplicationStatus.REJECTED);
-    //         .setRejectionReason("Client non éligible: " + eligibility.getMessage());
-    //         .setReviewedDate(LocalDateTime.now());
-    //         .setReviewedBy(approvedBy);
-    //         .save(application);
-    //          new RuntimeException("Client non éligible: " + eligibility.getMessage());
-    //     
-        
-    //     // . Calculer les mensualités
-    //      interestRate = new BigDecimal("0.15");
-    //      monthlyInterestRate = interestRate.divide(new BigDecimal("12"), 10, RoundingMode.HALF_UP);
-    //      monthlyPayment = calculateMonthlyPayment(
-    //         .getRequestedAmount(),
-    //         ,
-    //         .getTermMonths()
-    //     )
-    //      totalRepayment = monthlyPayment.multiply(BigDecimal.valueOf(application.getTermMonths()));
-        
-    //     // . Créer le prêt
-    //      loan = Loan.builder()
-    //         .(application.getClientId())
-    //         .(application.getClientEmail())
-    //         .(application.getClientFirstName())
-    //         .(application.getClientLastName())
-    //         .(application.getRequestedAmount())
-    //         .(interestRate)
-    //         .(application.getTermMonths())
-    //         .(RepaymentFrequency.MONTHLY)
-    //         .(monthlyPayment)
-    //         .(totalRepayment)
-    //         .(application.getRequestedAmount())
-    //         .(LoanStatus.APPROVED)
-    //         .(application.getPurpose())
-    //         .(application.getApplicationDate())
-    //         .(LocalDateTime.now())
-    //         .(approvedBy)
-    //         .(approvedBy)
-    //         .(application.getId())
-    //         .();
-        
-    //      = loanRepository.save(loan);
-        
-    //     // . Mettre à jour la demande
-    //     .setStatus(ApplicationStatus.APPROVED);
-    //     .setReviewedDate(LocalDateTime.now());
-    //     .setReviewedBy(approvedBy);
-    //     .save(application);
-        
-    //     // . Générer le plan d'amortissement
-    //     .generateAmortizationSchedule(loan);
-        
-    //     //  événement
-    //     .publishLoanApproved(loan);
-        
-    //      mapToLoanResponse(loan);
-    // 
-    
-    /**
-     * Rejeter un prêt avec vérification d'agence
-     */
+
+     // Rejeter un prêt avec vérification d'agence
     @Transactional
     public void rejectLoan(String applicationId, String rejectionReason, String reviewedBy, String userRole, String token) {
         log.info("de la demande: {} par {} (rôle: {})", applicationId, reviewedBy, userRole);
@@ -778,10 +652,8 @@ private void checkApprovalAuthorization(String applicationId, String userEmail, 
 
         log.info("rejetée avec succès: {} par {}", applicationId, reviewedBy);
     }
-    
-    /**
-     * Décaisser un prêt avec vérification d'agence
-     */
+
+     // Décaisser un prêt avec vérification d'agence
     @Transactional
     public LoanResponse disburseLoan(String loanId, String disbursedBy, String userRole, String token) {
         log.info("du prêt: {} par {} (rôle: {})", loanId, disbursedBy, userRole);
@@ -882,33 +754,26 @@ private void checkApprovalAuthorization(String applicationId, String userEmail, 
         log.info(" Directeur autorisé - Agence: {}", agency.getId());
     }
 }
-    /**
- * Repasser une demande au statut PENDING
- */
+
+// Repasser une demande au statut PENDING
 @Transactional
 public void resetToPending(String applicationId, String resetBy, String userRole, String token) {
     log.info("de la demande {} au statut PENDING par {} (rôle: {})", applicationId, resetBy, userRole);
     
-    //  les droits pour DIRECTEUR_AGENCE (ADMIN n'a pas besoin de vérification)
     if ("DIRECTEUR_AGENCE".equals(userRole)) {
         checkApprovalAuthorization(applicationId, resetBy, userRole, token);
     }
     
-    // . Récupérer la demande
     LoanApplication application = loanApplicationRepository.findById(applicationId)
         .orElseThrow(() -> new RuntimeException("Demande non trouvée: " + applicationId));
     
-    // . Vérifier si la demande est déjà en PENDING
     if (application.getStatus() == ApplicationStatus.PENDING) {
         throw new RuntimeException("La demande est déjà en attente (PENDING)");
     }
     
-    // . Vérifier si un prêt a déjà été créé pour cette demande
     boolean hasLinkedLoan = loanRepository.existsByApplicationId(applicationId);
     if (hasLinkedLoan && application.getStatus() == ApplicationStatus.APPROVED) {
         log.warn("Un prêt a déjà été créé pour cette demande. Reset potentiellement dangereux.");
-        //  Interdire le reset si un prêt existe
-        //  new RuntimeException("Impossible de repasser en PENDING car un prêt a déjà été créé");
     }
     
     // . Reset du statut
@@ -922,39 +787,4 @@ public void resetToPending(String applicationId, String resetBy, String userRole
     
     log.info("{} repassée en PENDING avec succès par {}", applicationId, resetBy);
 }
-// 
-//  void resetToPending(String applicationId, String resetBy) {
-//     .info("de la demande {} au statut PENDING par {}", applicationId, resetBy);
-    
-    
-//     // . Récupérer la demande
-//      application = loanApplicationRepository.findById(applicationId)
-//         .(() -> new RuntimeException("Demande non trouvée: " + applicationId));
-    
-//     // . Vérifier si la demande est déjà en PENDING
-//      (application.getStatus() == ApplicationStatus.PENDING) {
-//          new RuntimeException("La demande est déjà en attente (PENDING)");
-//     
-    
-//     // . Vérifier si un prêt a déjà été créé pour cette demande
-//      hasLinkedLoan = loanRepository.existsByApplicationId(applicationId);
-//      (hasLinkedLoan && application.getStatus() == ApplicationStatus.APPROVED) {
-//         .warn("Un prêt a déjà été créé pour cette demande. Reset potentiellement dangereux.");
-//         //  Interdire le reset si un prêt existe
-//         //  new RuntimeException("Impossible de repasser en PENDING car un prêt a déjà été créé");
-//     
-    
-//     // . Reset du statut
-//     .setStatus(ApplicationStatus.PENDING);
-//     .setRejectionReason(null);
-//     .setReviewedBy(null);
-//     .setReviewedDate(null);
-//     .setUpdatedAt(LocalDateTime.now());
-    
-//     .save(application);
-    
-//     .info("{} repassée en PENDING avec succès par {}", applicationId, resetBy);
-// 
-
-
 }

@@ -457,208 +457,517 @@ def draw_classes():
     ax.set_xlim(0, 24); ax.set_ylim(0, 18); ax.axis('off')
     fig.patch.set_facecolor('#f4f6f8')
 
-    RH = 0.27; HH = 0.44   # row height, header height
+    RH = 0.27; HH = 0.44
 
-    def uml_class(x, y, name, attrs, color, w=3.6):
-        h_attr = max(len(attrs) * 0.34 + 0.1, 0.5)
-        h_meth = max(len(methods or []) * 0.34 + 0.1, 0.4) if methods else 0
-        total_h = 0.55 + h_attr + h_meth
+    def B(x, y, name, attrs, color, w=3.4):
+        h = max(len(attrs)*RH+0.12, 0.32); tot = HH+h
+        ax.add_patch(FancyBboxPatch((x,y-tot),w,tot,boxstyle='square',facecolor='white',edgecolor=color,lw=1.2))
+        ax.add_patch(FancyBboxPatch((x,y-HH),w,HH,boxstyle='square',facecolor=color,edgecolor=color,lw=1.2))
+        ax.text(x+w/2,y-HH/2,name,ha='center',va='center',fontsize=7.5,fontweight='bold',color='white')
+        ax.plot([x,x+w],[y-HH,y-HH],color=color,lw=0.7)
+        for i,a in enumerate(attrs):
+            ax.text(x+0.09,y-HH-0.13-i*RH,f'  {a}',va='center',fontsize=6.0,color='#333333',family='monospace')
 
-        ax.add_patch(FancyBboxPatch((x, y - total_h), w, total_h,
-                     boxstyle="square", facecolor='white', edgecolor=color, lw=1.5))
-        ax.add_patch(FancyBboxPatch((x, y - 0.55), w, 0.55,
-                     boxstyle="square", facecolor=color, edgecolor=color, lw=1.5))
-        ax.text(x + w/2, y - 0.275, name, ha='center', va='center',
-                fontsize=9, fontweight='bold', color='white')
-        ax.plot([x, x+w], [y - 0.55, y - 0.55], color=color, lw=1)
-        for i, attr in enumerate(attrs):
-            ax.text(x + 0.12, y - 0.72 - i * 0.34, f'• {attr}',
-                    va='center', fontsize=7, color='#333333')
-        if methods:
-            sep_y = y - 0.55 - h_attr
-            ax.plot([x, x+w], [sep_y, sep_y], color=(*color, 0.4), lw=0.8, linestyle=':')
-            for i, meth in enumerate(methods):
-                ax.text(x + 0.12, sep_y - 0.22 - i * 0.34, f'+ {meth}',
-                        va='center', fontsize=7, color='#666666', style='italic')
-        return total_h
+    def Z(x,y,w,h,label,color):
+        ax.add_patch(FancyBboxPatch((x,y),w,h,boxstyle='round,pad=0.06',facecolor=(*color,0.06),edgecolor=color,lw=1.8,linestyle='--'))
+        ax.text(x+w/2,y+h-0.16,f'<< {label} >>',ha='center',va='top',fontsize=7.5,fontweight='bold',color=color)
 
-    def relation(x1, y1, x2, y2, label='', style='->', color='#777777'):
-        ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
-            arrowprops=dict(arrowstyle=style, color=color, lw=1.2))
-        if label:
-            ax.text((x1+x2)/2, (y1+y2)/2 + 0.12, label,
-                    ha='center', fontsize=7, color=color)
+    CA=(0.50,0.20,0.60); CCL=(0.09,0.44,0.73); CAC=(0.85,0.40,0.10)
+    CAG=(0.02,0.31,0.24); CLO=(0.06,0.62,0.49); CRE=(0.72,0.11,0.11)
+    CTX=(0.00,0.48,0.68); CNO=(0.70,0.30,0.00); CRP=(0.38,0.38,0.38); CCO=(0.10,0.50,0.50)
 
-    uml_class(0.2, 13.0, 'User (Auth)',
-              ['- id: String', '- email: String', '- password: String (hash)',
-               '- userRoleType: Enum', '- agencyId: String', '- agencyCode: String'],
-              ['+ login()', '+ generateToken()'], color=(0.5,0.2,0.6), w=3.6)
+    Z(0.1,12.2,11.8,5.5,'auth-service  :8080',CA)
+    Z(12.1,12.2,5.8,5.5,'client-service  :8081',CCL)
+    Z(18.1,12.2,5.8,5.5,'account-service  :8082',CAC)
 
-    uml_class(0.2, 8.5, 'Client',
-              ['- id: UUID', '- email: String', '- firstName: String',
-               '- lastName: String', '- agencyId: String', '- creditScore: Integer',
-               '- status: ClientStatus'],
-              ['+ getClientsByAgent()', '+ updateStatus()'], color=BLEU, w=3.6)
+    B(0.3,17.4,'User',['id:String(UUID)','email:String[unique]','userRoleType:UserRoleType','agencyId:String'],CA,w=3.3)
+    B(3.8,17.4,'Role',['id:String','name:String[unique]','permissions:Set<Privilege>'],CA,w=2.9)
+    B(6.9,17.4,'Privilege',['id:String','name:String[unique]','description:String'],CA,w=2.7)
+    B(9.8,17.4,'RefreshToken',['token:String[unique]','user:User','revoked:boolean'],CA,w=1.9)
+    B(0.3,14.9,'UserSession',['sessionToken:String','user:User','isActive:boolean'],CA,w=3.3)
+    B(3.8,14.9,'AuditLog',['userId:String','action:String','status:String'],CA,w=3.2)
+    B(7.2,14.9,'PasswordResetToken',['token:String[unique]','user:User','used:boolean'],CA,w=4.4)
 
-    uml_class(0.2, 4.2, 'Agency',
-              ['- id: String', '- code: String', '- name: String',
-               '- directorId: String', '- directorEmail: String'],
-              ['+ getAgents()', '+ toggleAgent()'], color=VERT, w=3.6)
+    B(12.3,17.4,'Client',['id:String(UUID)','email:String','clientType:ClientType','status:ClientStatus','creditScore:Integer'],CCL,w=5.4)
+    B(12.3,14.9,'Document',['type:DocumentType','fileUrl:String','verificationStatus:VerificationStatus'],CCL,w=5.4)
 
-    uml_class(5.0, 13.0, 'Compte',
-              ['- id: Long', '- clientId: String', '- numeroCompte: String',
-               '- typeCompte: TypeCompte', '- solde: BigDecimal',
-               '- statut: StatutCompte'],
-              ['+ crediter()', '+ debiter()', '+ changerStatut()'], color=ORANGE, w=3.6)
+    B(18.3,17.4,'Compte',['id:Long','clientId:String','typeCompte:TypeCompte','solde:BigDecimal','statut:StatutCompte'],CAC,w=5.4)
 
-    uml_class(5.0, 8.0, 'Loan',
-              ['- id: String', '- clientId: String', '- amount: BigDecimal',
-               '- interestRate: BigDecimal', '- status: LoanStatus',
-               '- monthlyPayment: BigDecimal'],
-              ['+ approveLoan()', '+ getAmortization()'], color=VERT, w=3.6)
+    Z(0.1,7.1,5.8,4.9,'agency-service  :8086',CAG)
+    Z(6.1,7.1,11.8,4.9,'loan-service  :8083',CLO)
+    Z(18.1,7.1,5.8,4.9,'repayment-service  :8084',CRE)
 
-    uml_class(5.0, 3.5, 'AgentAssignment',
-              ['- id: String', '- agentId: String', '- agentEmail: String',
-               '- agencyId: String', '- active: boolean'],
-              ['+ toggleStatus()'], color=(0.5,0.2,0.6), w=3.6)
+    B(0.3,11.7,'Agency',['code:String[unique]','name:String','directorId:String'],CAG,w=2.6)
+    B(3.1,11.7,'AgencyStats',['agencyId:String','totalClients:Long','totalLoans:Long'],CAG,w=2.6)
+    B(0.3,10.1,'AgentAssignment',['agentId:String','agencyId:String','active:boolean'],CAG,w=2.6)
+    B(3.1,10.1,'AgencyConfiguration',['agencyId:String','configKey:String','configValue:String'],CAG,w=2.6)
 
-    uml_class(10.0, 13.0, 'Transaction',
-              ['- id: String', '- compteId: Long', '- type: TypeTransaction',
-               '- montant: BigDecimal', '- statut: StatutTransaction'],
-              ['+ effectuerDepot()', '+ effectuerRetrait()'], color=BLEU, w=3.6)
+    B(6.3,11.7,'LoanProduct',['name:String[unique]','minAmount:BigDecimal','interestRate:BigDecimal'],CLO,w=3.7)
+    B(10.2,11.7,'LoanApplication',['clientId:String','requestedAmount:BigDecimal','status:ApplicationStatus'],CLO,w=3.7)
+    B(14.1,11.7,'Loan',['loanNumber:String','clientId:String','amount:BigDecimal','status:LoanStatus'],CLO,w=3.6)
+    B(6.3,9.8,'AmortizationSchedule',['installmentNumber:Integer','dueAmount:BigDecimal','paid:boolean'],CLO,w=5.4)
+    B(11.9,9.8,'Schedule(loan)',['loanId:String','dueDate:LocalDateTime','totalAmount:BigDecimal','status:ScheduleStatus'],CLO,w=5.8)
 
-    uml_class(10.0, 8.2, 'Payment (Repayment)',
-              ['- id: String', '- loanId: String', '- clientId: String',
-               '- amount: BigDecimal', '- status: PaymentStatus',
-               '- paymentMethod: Enum'],
-              ['+ validatePayment()'], color=ROUGE, w=3.6)
+    B(18.3,11.7,'Repayment',['loanId:String','dueAmount:BigDecimal','status:PaymentStatus'],CRE,w=2.6)
+    B(21.1,11.7,'Payment',['loanId:String','amount:BigDecimal','paymentMethod:PaymentMethod'],CRE,w=2.6)
+    B(18.3,10.1,'Schedule(repay)',['loanId:String','dueAmount:BigDecimal','paid:boolean'],CRE,w=2.6)
+    B(21.1,10.1,'Penalty',['loanId:String','amount:BigDecimal','daysOverdue:Integer'],CRE,w=2.6)
 
-    uml_class(10.0, 3.5, 'Notification',
-              ['- id: String', '- destinataire: String', '- type: TypeNotif.',
-               '- canal: EMAIL/SMS', '- statut: ENVOYE/ECHEC'],
-              ['+ envoyer()'], color=(0.7,0.3,0.0), w=3.6)
+    Z(0.1,2.6,5.8,4.3,'transaction-service  :8088',CTX)
+    Z(6.1,2.6,8.8,4.3,'notification-service  :8089',CNO)
+    Z(15.1,2.6,8.8,4.3,'reporting-service  :8085',CRP)
 
-    uml_class(14.2, 13.0, 'Document (KYC)',
-              ['- id: String', '- clientId: String', '- type: DocumentType',
-               '- driveFileId: String', '- verificationStatus: Enum'],
-              ['+ upload()', '+ verify()'], color=(0.3,0.5,0.2), w=3.6)
+    B(0.3,6.6,'Transaction',['compteId:Long','typeTransaction:TypeTransaction','montant:BigDecimal','statut:StatutTransaction','modePaiement:ModePaiement'],CTX,w=5.4)
+    B(6.3,6.6,'Notification',['clientId:String','type:TypeNotification','canal:CanalNotification','statut:StatutNotification'],CNO,w=4.2)
+    B(10.7,6.6,'NotificationTemplate',['nom:String[unique]','typeNotification:TypeNotification','canal:CanalNotification','actif:Boolean'],CNO,w=3.9)
+    B(15.3,6.6,'Report',['name:String','type:ReportType','format:ReportFormat','generatedBy:String'],CRP,w=4.1)
+    B(19.6,6.6,'Kpi',['name:String','category:String','value:BigDecimal','unit:String'],CRP,w=4.1)
 
-    uml_class(14.2, 8.5, 'LoanSchedule',
-              ['- id: String', '- loanId: String', '- installmentNumber: Int',
-               '- dueAmount: BigDecimal', '- paid: boolean'],
-              [], color=VERT, w=3.6)
+    Z(0.1,0.1,23.8,2.3,'configuration-service  :8087',CCO)
+    B(0.3,2.1,'MicrofinanceConfiguration',['microfinanceCode:String','clientIdStrategy:ClientIdGenerationStrategy'],CCO,w=6.2)
+    B(6.7,2.1,'AccountCategory',['code:String[unique]','name:String'],CCO,w=5.0)
+    B(12.0,2.1,'AccountTypeConfiguration',['code:String','accountType:AccountType','category:AccountCategory','interestRate:BigDecimal'],CCO,w=5.5)
 
-    uml_class(14.2, 4.5, 'Report',
-              ['- id: String', '- agencyId: String', '- type: ReportType',
-               '- generatedAt: LocalDateTime'],
-              ['+ generate()'], color=(0.4,0.4,0.4), w=3.6)
+    # relations intra-service
+    ax.plot([3.6,3.8],[16.6,16.6],'-',color=CA,lw=1.1); ax.text(3.7,16.75,'*:*',fontsize=6,color=CA,ha='center')
+    ax.plot([6.7,6.9],[16.6,16.6],'-',color=CA,lw=1.1); ax.text(6.8,16.75,'*:*',fontsize=6,color=CA,ha='center')
+    ax.annotate('',xy=(15.0,14.9),xytext=(15.0,16.0),arrowprops=dict(arrowstyle='->',color=CCL,lw=1.0))
+    ax.text(15.3,15.5,'1..*',fontsize=6,color=CCL)
+    ax.annotate('',xy=(9.0,9.8),xytext=(15.9,10.8),arrowprops=dict(arrowstyle='->',color=CLO,lw=1.0))
+    ax.text(12.2,10.4,'1..*',fontsize=6,color=CLO,ha='center')
+    ax.plot([11.7,12.0],[1.4,1.4],'-',color=CCO,lw=1.1); ax.text(11.85,1.55,'1..*',fontsize=6,color=CCO,ha='center')
+    ax.plot([10.5,10.7],[5.5,5.5],'-',color=CNO,lw=1.1); ax.text(10.6,5.65,'N:1',fontsize=6,color=CNO,ha='center')
 
-    relation(3.8, 10.0, 5.0, 11.0, '1..*', color=BLEU)
-    relation(3.8, 8.0, 3.8, 6.0, '', color=VERT)
-    relation(3.8, 6.5, 5.0, 6.0, '1..*', color=VERT)
-    relation(8.6, 10.5, 10.0, 10.5, '', color=ORANGE)
-    relation(8.6, 6.0, 10.0, 6.0, '1..*', color=VERT)
-    relation(1.8, 8.5, 1.8, 7.5, '', color=BLEU)
+    note=('Relations cross-services (Database per Service) :  '
+          'Compte.clientId→Client.id  |  Transaction.compteId→Compte.id  |  '
+          'Loan.clientId→Client.id  |  Repayment.loanId→Loan.id')
+    ax.text(12.0,0.04,note,ha='center',va='bottom',fontsize=6.0,color='#555555',style='italic',
+            bbox=dict(boxstyle='round,pad=0.2',fc='#fffbe6',ec='#ccaa00',lw=0.8))
 
-    ax.set_title('Diagramme de Classes — Entites Principales',
-                 fontsize=14, fontweight='bold', color='#064e3b', pad=10)
+    ax.set_title('Diagramme de Classes Global — MicrofinanceHub  (10 microservices)',
+                 fontsize=14, fontweight='bold', color='#064e3b', pad=12)
     return fig_to_stream(fig)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# DIAGRAMME 8 : Architecture en couches (service typique) — NOUVEAU
+# DIAGRAMMES 8a-8j : Diagrammes de Classes par service
 # ══════════════════════════════════════════════════════════════════════════════
+
+def draw_classes_auth_service():
+    fig, ax = plt.subplots(figsize=(20, 14))
+    ax.set_xlim(0, 20); ax.set_ylim(0, 14); ax.axis('off')
+    fig.patch.set_facecolor('#f4f6f8')
+    cls, enu, arr = _uml(ax)
+    C = (0.50, 0.20, 0.60)
+    cls(0.2, 13.5, 'User', [
+        '- id : String (UUID)', '- email : String [unique]',
+        '- phoneNumber : String', '- password : String (BCrypt)',
+        '- firstName : String', '- lastName : String',
+        '- userRoleType : UserRoleType', '- agencyId : String',
+        '- agencyCode : String', '- enabled : boolean',
+        '- locked : boolean', '- createdAt : LocalDateTime',
+        '- lastLoginAt : LocalDateTime'], C, w=4.8)
+    cls(5.3, 13.5, 'Role', [
+        '- id : String (UUID)', '- name : String [unique]',
+        '- description : String', '- permissions : Set<Privilege>'], C, w=4.0)
+    cls(9.6, 13.5, 'Privilege', [
+        '- id : String (UUID)', '- name : String [unique]',
+        '- description : String'], C, w=4.0)
+    cls(14.0, 13.5, 'RefreshToken', [
+        '- id : String (UUID)', '- token : String [unique]',
+        '- user : User', '- expiryDate : LocalDateTime',
+        '- revoked : boolean'], C, w=5.7)
+    cls(0.2, 8.2, 'UserSession', [
+        '- id : String (UUID)', '- user : User',
+        '- sessionToken : String [unique]', '- deviceInfo : String',
+        '- ipAddress : String', '- lastActivity : LocalDateTime',
+        '- expiresAt : LocalDateTime', '- isActive : boolean'], C, w=4.8)
+    cls(5.3, 8.2, 'AuditLog', [
+        '- id : String (UUID)', '- userId : String',
+        '- email : String', '- action : String',
+        '- ipAddress : String', '- userAgent : String',
+        '- status : String', '- failureReason : String',
+        '- timestamp : LocalDateTime'], C, w=4.8)
+    cls(10.4, 8.2, 'PasswordResetToken', [
+        '- id : String (UUID)', '- user : User',
+        '- token : String [unique]', '- expiryDate : LocalDateTime',
+        '- used : boolean'], C, w=5.0)
+    enu(0.2, 3.8, 'UserRoleType', [
+        'CLIENT', 'AGENT', 'DIRECTEUR_AGENCE', 'ADMIN'], C, w=4.0)
+    enu(4.6, 3.8, 'Permission', [
+        'VIEW_OWN_PROFILE', 'UPDATE_OWN_PROFILE', 'APPLY_FOR_LOAN',
+        'VIEW_OWN_LOANS', 'MAKE_REPAYMENT', 'VIEW_OWN_ACCOUNTS',
+        'VIEW_ALL_CLIENTS', 'MANAGE_CLIENTS', 'APPROVE_LOANS',
+        'VIEW_BASIC_REPORTS', 'MANAGE_USERS', 'MANAGE_ROLES',
+        'CONFIGURE_SYSTEM', 'VIEW_ALL_REPORTS', 'VIEW_AUDIT_LOGS'], C, w=5.5)
+    arr(5.0, 12.4, 5.3, 12.4, 'User *:* Role', color=C)
+    arr(9.3, 12.4, 9.6, 12.4, 'Role *:* Privilege', color=C)
+    arr(14.3, 12.0, 5.0, 11.8, '1:1', color=C)
+    arr(2.6, 8.2, 2.6, 8.9, 'N:1', color=C)
+    arr(12.9, 8.2, 12.9, 8.9, '1:1', color=C)
+    ax.set_title('Diagramme de Classes — auth-service (:8080)',
+                 fontsize=13, fontweight='bold', color='#064e3b', pad=10)
+    return fig_to_stream(fig)
+
+
+def draw_classes_client_service():
+    fig, ax = plt.subplots(figsize=(14, 10))
+    ax.set_xlim(0, 14); ax.set_ylim(0, 10); ax.axis('off')
+    fig.patch.set_facecolor('#f4f6f8')
+    cls, enu, arr = _uml(ax)
+    C = (0.09, 0.44, 0.73)
+    cls(0.2, 9.5, 'Client', [
+        '- id : String (UUID)', '- email : String [unique]',
+        '- phoneNumber : String', '- firstName : String',
+        '- lastName : String', '- address : String',
+        '- birthDate : LocalDateTime', '- clientType : ClientType',
+        '- status : ClientStatus', '- creditScore : Integer',
+        '- agencyId : String', '- createdBy : String',
+        '- createdAt : LocalDateTime'], C, w=6.0)
+    cls(6.5, 9.5, 'Document', [
+        '- id : String (UUID)', '- client : Client',
+        '- type : DocumentType', '- fileName : String',
+        '- fileUrl : String', '- fileType : String',
+        '- fileSize : Long', '- verificationStatus : VerificationStatus',
+        '- verifiedBy : String', '- verifiedAt : LocalDateTime',
+        '- uploadedAt : LocalDateTime'], C, w=7.2)
+    enu(0.2, 4.0, 'ClientType', ['INDIVIDUAL', 'BUSINESS', 'GROUP'], C, w=3.2)
+    enu(3.6, 4.0, 'ClientStatus', [
+        'ACTIVE', 'INACTIVE', 'SUSPENDED', 'BLACKLISTED', 'PENDING'], C, w=3.2)
+    enu(7.0, 4.0, 'DocumentType', [
+        'ID_CARD', 'PASSPORT', 'DRIVER_LICENSE',
+        'PROOF_OF_ADDRESS', 'BUSINESS_REGISTRATION',
+        'TAX_IDENTIFICATION', 'BANK_STATEMENT', 'PHOTO'], C, w=3.6)
+    enu(10.8, 4.0, 'VerificationStatus', [
+        'PENDING', 'VERIFIED', 'REJECTED', 'EXPIRED'], C, w=3.0)
+    arr(6.2, 7.0, 6.5, 7.0, '1 — *', color=C)
+    ax.set_title('Diagramme de Classes — client-service (:8081)',
+                 fontsize=13, fontweight='bold', color='#064e3b', pad=10)
+    return fig_to_stream(fig)
+
+
+def draw_classes_account_service():
+    fig, ax = plt.subplots(figsize=(12, 10))
+    ax.set_xlim(0, 12); ax.set_ylim(0, 10); ax.axis('off')
+    fig.patch.set_facecolor('#f4f6f8')
+    cls, enu, arr = _uml(ax)
+    C = (0.85, 0.40, 0.10)
+    cls(0.5, 9.5, 'Compte', [
+        '- id : Long', '- clientId : String',
+        '- numeroCompte : String [unique]', '- typeCompte : TypeCompte',
+        '- solde : BigDecimal', '- devise : Devise',
+        '- statut : StatutCompte', '- dateOuverture : LocalDateTime',
+        '- tauxInteret : BigDecimal', '- soldeMinimum : BigDecimal',
+        '- plafond : BigDecimal', '- description : String',
+        '- clientEmail : String', '- clientNom : String',
+        '+ crediter(montant)', '+ debiter(montant)', '+ isOperationnel()'], C, w=11.0)
+    enu(0.3, 3.8, 'TypeCompte', [
+        'EPARGNE', 'COURANT', 'DEPOT_A_TERME', 'MICRO_EPARGNE', 'CREDIT'], C, w=3.5)
+    enu(4.1, 3.8, 'StatutCompte', [
+        'EN_ATTENTE_VALIDATION', 'ACTIF', 'BLOQUE',
+        'SUSPENDU', 'INACTIF', 'FERME', 'REJETE'], C, w=4.0)
+    enu(8.3, 3.8, 'Devise', [
+        'XAF', 'XOF', 'EUR', 'USD', 'GBP', 'NGN', 'GHS', 'MAD', 'CDF'], C, w=3.5)
+    ax.set_title('Diagramme de Classes — account-service (:8082)',
+                 fontsize=13, fontweight='bold', color='#064e3b', pad=10)
+    return fig_to_stream(fig)
+
+
+def draw_classes_agency_service():
+    fig, ax = plt.subplots(figsize=(16, 10))
+    ax.set_xlim(0, 16); ax.set_ylim(0, 10); ax.axis('off')
+    fig.patch.set_facecolor('#f4f6f8')
+    cls, enu, arr = _uml(ax)
+    C = (0.02, 0.31, 0.24)
+    cls(0.2, 9.5, 'Agency', [
+        '- id : String (UUID)', '- code : String [unique]',
+        '- name : String', '- address : String', '- city : String',
+        '- phoneNumber : String', '- email : String',
+        '- directorId : String [unique]', '- directorEmail : String',
+        '- directorName : String', '- region : String',
+        '- status : String', '- createdAt : LocalDateTime'], C, w=5.5)
+    cls(6.0, 9.5, 'AgentAssignment', [
+        '- id : String (UUID)', '- agentId : String',
+        '- agentEmail : String', '- agentName : String',
+        '- agencyId : String', '- agencyCode : String',
+        '- role : String', '- assignedBy : String',
+        '- reason : String', '- reference : String [unique]',
+        '- assignedAt : LocalDateTime', '- active : boolean'], C, w=5.5)
+    cls(11.8, 9.5, 'AgencyStats', [
+        '- agencyId : String (PK)', '- totalClients : Long',
+        '- totalAccounts : Long', '- totalLoans : Long',
+        '- activeLoans : Long', '- completedLoans : Long',
+        '- defaultedLoans : Long', '- totalOutstanding : BigDecimal',
+        '- monthlyRepaymentRate : Double'], C, w=3.9)
+    cls(0.2, 3.5, 'AgencyConfiguration', [
+        '- id : String (UUID)', '- agencyId : String',
+        '- configKey : String', '- configValue : String',
+        '- description : String', '- updatedBy : String',
+        '- createdAt : LocalDateTime'], C, w=7.0)
+    arr(5.5, 8.0, 6.0, 8.0, '1 — *', color=C)
+    arr(5.5, 7.2, 11.8, 8.0, '1 — 1', color=C)
+    arr(3.7, 5.8, 3.7, 6.5, '1 — *', color=C)
+    ax.set_title('Diagramme de Classes — agency-service (:8086)',
+                 fontsize=13, fontweight='bold', color='#064e3b', pad=10)
+    return fig_to_stream(fig)
+
+
+def draw_classes_loan_service():
+    fig, ax = plt.subplots(figsize=(22, 14))
+    ax.set_xlim(0, 22); ax.set_ylim(0, 14); ax.axis('off')
+    fig.patch.set_facecolor('#f4f6f8')
+    cls, enu, arr = _uml(ax)
+    C = (0.06, 0.62, 0.49)
+    cls(0.2, 13.5, 'LoanProduct', [
+        '- id : String (UUID)', '- name : String [unique]',
+        '- description : String', '- minAmount : BigDecimal',
+        '- maxAmount : BigDecimal', '- minTermMonths : Integer',
+        '- maxTermMonths : Integer', '- interestRate : BigDecimal',
+        '- active : boolean'], C, w=5.0)
+    cls(5.5, 13.5, 'LoanApplication', [
+        '- id : String (UUID)', '- applicationNumber : String',
+        '- clientId : String', '- accountNumber : String',
+        '- clientEmail : String', '- requestedAmount : BigDecimal',
+        '- termMonths : Integer', '- purpose : String',
+        '- monthlyIncome : BigDecimal', '- employmentStatus : String',
+        '- status : ApplicationStatus', '- rejectionReason : String',
+        '- reviewedBy : String', '- applicationDate : LocalDateTime'], C, w=5.5)
+    cls(11.3, 13.5, 'Loan', [
+        '- id : String (UUID)', '- loanNumber : String',
+        '- applicationId : String', '- clientId : String',
+        '- amount : BigDecimal', '- interestRate : BigDecimal',
+        '- termMonths : Integer', '- repaymentFrequency : RepaymentFrequency',
+        '- monthlyPayment : BigDecimal', '- totalRepayment : BigDecimal',
+        '- remainingBalance : BigDecimal', '- status : LoanStatus',
+        '- loanProductId : String', '- approvedBy : String',
+        '- disbursementDate : LocalDateTime'], C, w=5.5)
+    cls(17.0, 13.5, 'AmortizationSchedule', [
+        '- id : String (UUID)', '- loan : Loan',
+        '- installmentNumber : Integer', '- dueDate : LocalDateTime',
+        '- dueAmount : BigDecimal', '- principalAmount : BigDecimal',
+        '- interestAmount : BigDecimal', '- remainingBalance : BigDecimal',
+        '- paid : boolean', '- paidDate : LocalDateTime',
+        '- paymentId : String'], C, w=4.8)
+    cls(0.2, 5.5, 'Schedule', [
+        '- id : String (UUID)', '- loanId : String',
+        '- loanNumber : String', '- clientId : String',
+        '- installmentNumber : Integer', '- dueDate : LocalDateTime',
+        '- principalAmount : BigDecimal', '- interestAmount : BigDecimal',
+        '- totalAmount : BigDecimal', '- paidAmount : BigDecimal',
+        '- remainingAmount : BigDecimal', '- penaltyAmount : BigDecimal',
+        '- status : ScheduleStatus', '- paidDate : LocalDateTime',
+        '- paymentId : String'], C, w=5.5)
+    enu(6.5, 5.0, 'LoanStatus', [
+        'PENDING', 'UNDER_REVIEW', 'APPROVED',
+        'REJECTED', 'ACTIVE', 'COMPLETED', 'DEFAULTED'], C, w=4.0)
+    enu(10.8, 5.0, 'ApplicationStatus', [
+        'PENDING', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'CANCELLED'], C, w=4.0)
+    enu(15.1, 5.0, 'RepaymentFrequency', [
+        'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'QUARTERLY'], C, w=3.5)
+    enu(18.9, 5.0, 'ScheduleStatus', [
+        'PENDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE'], C, w=2.9)
+    arr(11.0, 11.5, 11.3, 11.5, '1 — *', color=C)
+    arr(16.8, 10.5, 17.0, 10.5, '1 — *', color=C)
+    arr(13.5, 10.5, 3.5, 5.5, '1 — *', color=C)
+    ax.set_title('Diagramme de Classes — loan-service (:8083)',
+                 fontsize=13, fontweight='bold', color='#064e3b', pad=10)
+    return fig_to_stream(fig)
+
+
+def draw_classes_repayment_service():
+    fig, ax = plt.subplots(figsize=(18, 12))
+    ax.set_xlim(0, 18); ax.set_ylim(0, 12); ax.axis('off')
+    fig.patch.set_facecolor('#f4f6f8')
+    cls, enu, arr = _uml(ax)
+    C = (0.72, 0.11, 0.11)
+    cls(0.2, 11.5, 'Repayment', [
+        '- id : String (UUID)', '- loanId : String',
+        '- clientId : String', '- installmentNumber : Integer',
+        '- dueAmount : BigDecimal', '- paidAmount : BigDecimal',
+        '- penaltyAmount : BigDecimal', '- dueDate : LocalDateTime',
+        '- paidDate : LocalDateTime', '- status : PaymentStatus',
+        '- paymentId : String'], C, w=5.5)
+    cls(6.0, 11.5, 'Payment', [
+        '- id : String (UUID)', '- paymentNumber : String',
+        '- loanId : String', '- clientId : String',
+        '- amount : BigDecimal', '- penaltyAmount : BigDecimal',
+        '- paymentMethod : PaymentMethod', '- status : PaymentStatus',
+        '- transactionId : String', '- reference : String',
+        '- receiptNumber : String', '- paymentDate : LocalDateTime',
+        '- compteSourceId : Long', '- validatedBy : String'], C, w=5.5)
+    cls(11.8, 11.5, 'Schedule', [
+        '- id : UUID', '- loanId : String',
+        '- installmentNumber : Integer', '- dueDate : LocalDateTime',
+        '- dueAmount : BigDecimal', '- principalAmount : BigDecimal',
+        '- interestAmount : BigDecimal', '- remainingBalance : BigDecimal',
+        '- paid : boolean', '- paidDate : LocalDateTime',
+        '- paymentId : String',
+        '+ getPaidAmount()', '+ getRemainingAmount()', '+ getStatus()'], C, w=5.9)
+    cls(0.2, 4.5, 'Penalty', [
+        '- id : String (UUID)', '- loanId : String',
+        '- scheduleId : String', '- installmentNumber : Integer',
+        '- amount : BigDecimal', '- dailyPenaltyRate : BigDecimal',
+        '- daysOverdue : Integer', '- paid : boolean',
+        '- appliedDate : LocalDateTime', '- paidDate : LocalDateTime',
+        '- paymentId : String'], C, w=5.5)
+    enu(6.5, 4.0, 'PaymentMethod', [
+        'ESPECES', 'MOBILE_MONEY', 'VIREMENT_BANCAIRE',
+        'VIREMENT_INTERNE', 'CHEQUE', 'DEBIT_COMPTE'], C, w=4.0)
+    enu(10.8, 4.0, 'PaymentStatus', [
+        'PENDING', 'PENDING_VALIDATION',
+        'COMPLETED', 'FAILED', 'CANCELLED'], C, w=4.0)
+    enu(15.1, 4.0, 'ScheduleStatus', [
+        'PENDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE'], C, w=2.7)
+    ax.set_title('Diagramme de Classes — repayment-service (:8084)',
+                 fontsize=13, fontweight='bold', color='#064e3b', pad=10)
+    return fig_to_stream(fig)
+
+
+def draw_classes_transaction_service():
+    fig, ax = plt.subplots(figsize=(14, 10))
+    ax.set_xlim(0, 14); ax.set_ylim(0, 10); ax.axis('off')
+    fig.patch.set_facecolor('#f4f6f8')
+    cls, enu, arr = _uml(ax)
+    C = (0.00, 0.48, 0.68)
+    cls(0.5, 9.5, 'Transaction', [
+        '- id : Long', '- compteId : Long',
+        '- typeTransaction : TypeTransaction', '- montant : BigDecimal',
+        '- soldeAvant : BigDecimal', '- soldeApres : BigDecimal',
+        '- dateTransaction : LocalDateTime', '- reference : String [unique]',
+        '- statut : StatutTransaction', '- description : String',
+        '- agentId : Long', '- compteDestination : String',
+        '- loanId : String', '- clientId : String',
+        '- modePaiement : ModePaiement', '- pieceJustificative : String',
+        '- campayReference : String [unique]', '- numeroPaiement : String',
+        '- createdAt : LocalDateTime'], C, w=13.0)
+    enu(0.3, 3.8, 'TypeTransaction', [
+        'DEPOT', 'RETRAIT', 'VIREMENT_ENTRANT', 'VIREMENT_SORTANT',
+        'DECAISSEMENT_PRET', 'REMBOURSEMENT_PRET', 'FRAIS', 'INTERET'], C, w=4.2)
+    enu(4.8, 3.8, 'StatutTransaction', [
+        'INITIEE', 'EN_VALIDATION', 'VALIDEE',
+        'EN_TRAITEMENT', 'COMPLETEE', 'ECHOUEE', 'ANNULEE'], C, w=4.2)
+    enu(9.3, 3.8, 'ModePaiement', [
+        'ESPECES', 'MOBILE_MONEY', 'VIREMENT_BANCAIRE',
+        'VIREMENT_INTERNE', 'CHEQUE', 'DEBIT_COMPTE'], C, w=4.5)
+    ax.set_title('Diagramme de Classes — transaction-service (:8088)',
+                 fontsize=13, fontweight='bold', color='#064e3b', pad=10)
+    return fig_to_stream(fig)
+
+
+def draw_classes_notification_service():
+    fig, ax = plt.subplots(figsize=(16, 12))
+    ax.set_xlim(0, 16); ax.set_ylim(0, 12); ax.axis('off')
+    fig.patch.set_facecolor('#f4f6f8')
+    cls, enu, arr = _uml(ax)
+    C = (0.70, 0.30, 0.00)
+    cls(0.2, 11.5, 'Notification', [
+        '- id : Long', '- clientId : String',
+        '- destinataireEmail : String', '- destinataireTelephone : String',
+        '- sujet : String', '- message : String',
+        '- type : TypeNotification', '- canal : CanalNotification',
+        '- statut : StatutNotification', '- priorite : Integer',
+        '- dateEnvoi : LocalDateTime', '- dateProgrammee : LocalDateTime',
+        '- tentatives : Integer', '- erreurMessage : String',
+        '- referenceId : String', '- referenceType : String',
+        '- template : NotificationTemplate'], C, w=7.5)
+    cls(8.0, 11.5, 'NotificationTemplate', [
+        '- id : Long', '- nom : String [unique]',
+        '- sujet : String', '- contenu : String (variables {{}})',
+        '- typeNotification : TypeNotification',
+        '- canal : CanalNotification',
+        '- actif : Boolean', '- fichierHtml : String'], C, w=7.7)
+    enu(0.2, 4.5, 'TypeNotification', [
+        'DEMANDE_PRET', 'APPROBATION_PRET', 'REJET_PRET', 'DECAISSEMENT',
+        'RAPPEL_ECHEANCE', 'CONFIRMATION_REMB', 'ALERTE_RETARD', 'PENALITE_APPLIQUEE',
+        'CREATION_COMPTE', 'DEPOT_EFFECTUE', 'RETRAIT_EFFECTUE',
+        'PROMOTION', 'NEWSLETTER', 'ALERTE_SYSTEME', 'ALERTE_SOLDE'], C, w=5.0)
+    enu(5.5, 4.5, 'CanalNotification', [
+        'EMAIL', 'SMS', 'IN_APP', 'EMAIL_SMS'], C, w=3.5)
+    enu(9.3, 4.5, 'StatutNotification', [
+        'EN_ATTENTE', 'EN_COURS', 'ENVOYEE',
+        'ECHEC', 'ECHEC_DEFINITIF', 'PROGRAMMEE', 'LUE'], C, w=4.0)
+    arr(7.7, 9.0, 8.0, 9.0, 'N — 1', color=C)
+    ax.set_title('Diagramme de Classes — notification-service (:8089)',
+                 fontsize=13, fontweight='bold', color='#064e3b', pad=10)
+    return fig_to_stream(fig)
+
+
+def draw_classes_reporting_service():
+    fig, ax = plt.subplots(figsize=(14, 10))
+    ax.set_xlim(0, 14); ax.set_ylim(0, 10); ax.axis('off')
+    fig.patch.set_facecolor('#f4f6f8')
+    cls, enu, arr = _uml(ax)
+    C = (0.38, 0.38, 0.38)
+    cls(0.2, 9.5, 'Report', [
+        '- id : String (UUID)', '- name : String',
+        '- description : String', '- type : ReportType',
+        '- format : ReportFormat', '- startDate : LocalDateTime',
+        '- endDate : LocalDateTime', '- filePath : String',
+        '- fileSize : Long', '- generatedBy : String',
+        '- generatedAt : LocalDateTime', '- scheduled : boolean',
+        '- scheduleCron : String'], C, w=6.0)
+    cls(6.5, 9.5, 'Kpi', [
+        '- id : String (UUID)', '- name : String',
+        '- description : String', '- category : String',
+        '- value : BigDecimal', '- unit : String',
+        '- periodStart : LocalDateTime', '- periodEnd : LocalDateTime',
+        '- calculatedAt : LocalDateTime', '- calculatedBy : String',
+        '- metadata : String (jsonb)'], C, w=7.2)
+    enu(0.2, 3.5, 'ReportType', [
+        'PORTFOLIO_SUMMARY', 'LOAN_PERFORMANCE',
+        'CLIENT_ANALYSIS', 'REPAYMENT_HISTORY',
+        'AGENCY_PERFORMANCE', 'FINANCIAL_STATEMENT'], C, w=4.5)
+    enu(5.0, 3.5, 'ReportFormat', ['PDF', 'EXCEL', 'CSV', 'JSON'], C, w=3.0)
+    enu(8.3, 3.5, 'PeriodType', [
+        'DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY', 'CUSTOM'], C, w=3.5)
+    ax.set_title('Diagramme de Classes — reporting-service (:8085)',
+                 fontsize=13, fontweight='bold', color='#064e3b', pad=10)
+    return fig_to_stream(fig)
+
+
+def draw_classes_configuration_service():
+    fig, ax = plt.subplots(figsize=(16, 12))
+    ax.set_xlim(0, 16); ax.set_ylim(0, 12); ax.axis('off')
+    fig.patch.set_facecolor('#f4f6f8')
+    cls, enu, arr = _uml(ax)
+    C = (0.10, 0.50, 0.50)
+    cls(0.2, 11.5, 'MicrofinanceConfiguration', [
+        '- id : String (UUID)', '- microfinanceCode : String [unique]',
+        '- affiliatedBankCode : String', '- affiliatedToBank : boolean',
+        '- agencyCode : String', '- agencyName : String',
+        '- clientIdStrategy : ClientIdGenerationStrategy',
+        '- customClientIdPattern : String', '- enableRibGeneration : boolean',
+        '- bankCode : String', '- countryCode : String',
+        '- accountNumberFormat : String', '- useCustomFormat : boolean',
+        '- active : boolean', '- createdBy : String'], C, w=7.5)
+    cls(8.0, 11.5, 'AccountCategory', [
+        '- id : String (UUID)', '- code : String [unique]',
+        '- name : String', '- description : String',
+        '- icon : String', '- color : String',
+        '- displayOrder : int', '- active : boolean',
+        '- accountTypes : List<AccountTypeConfiguration>',
+        '- createdBy : String'], C, w=7.7)
+    cls(0.2, 4.5, 'AccountTypeConfiguration', [
+        '- id : String (UUID)', '- code : String [unique]',
+        '- accountType : AccountType', '- category : AccountCategory',
+        '- name : String', '- description : String',
+        '- minimumBalance : BigDecimal', '- maximumBalance : BigDecimal',
+        '- interestRate : BigDecimal', '- monthlyFee : BigDecimal',
+        '- transactionFee : BigDecimal', '- allowOverdraft : boolean',
+        '- overdraftLimit : BigDecimal', '- maxAccountsPerClient : int',
+        '- active : boolean'], C, w=7.5)
+    enu(8.2, 4.5, 'AccountType', [
+        'EPARGNE', 'COURANT', 'DEPOT_A_TERME', 'MICRO_EPARGNE', 'CREDIT'], C, w=4.0)
+    enu(12.5, 4.5, 'ClientIdGenerationStrategy', [
+        'SEQUENTIAL', 'UUID', 'CUSTOM'], C, w=3.3)
+    ax.plot([7.9, 7.9, 7.7], [9.2, 3.5, 3.5], '-', color=C, lw=1.2)
+    ax.text(7.5, 6.3, '1', fontsize=7, color=C); ax.text(7.5, 3.3, '*', fontsize=9, color=C)
+    ax.set_title('Diagramme de Classes — configuration-service (:8087)',
+                 fontsize=13, fontweight='bold', color='#064e3b', pad=10)
+    return fig_to_stream(fig)
+
+
 def draw_classes_par_service():
-    fig, ax = plt.subplots(figsize=(14, 9))
-    ax.set_xlim(0, 14); ax.set_ylim(0, 9); ax.axis('off')
-    fig.patch.set_facecolor('#f8f9fa')
-
-    # Titre
-    ax.text(7, 8.65, 'Architecture en Couches — Service Typique (ex: client-service)',
-            ha='center', va='center', fontsize=12, fontweight='bold', color='#064e3b')
-
-    # Couches (bandes horizontales)
-    layers = [
-        # (y_bottom, height, label_couche, color, elements)
-        (6.8, 1.2, 'COUCHE PRESENTATION\n(Controller)', BLEU,
-         [('ClientController', 3.0, 7.25),
-          ('AccountController', 7.0, 7.25),
-          ('LoanController', 11.0, 7.25)]),
-        (5.2, 1.2, 'COUCHE SERVICE\n(Business Logic)', VERT,
-         [('ClientService', 3.0, 5.75),
-          ('AccountService', 7.0, 5.75),
-          ('LoanService', 11.0, 5.75)]),
-        (3.6, 1.2, 'COUCHE PERSISTANCE\n(Repository)', ORANGE,
-         [('ClientRepository\n(JpaRepository)', 3.0, 4.18),
-          ('AccountRepository\n(JpaRepository)', 7.0, 4.18),
-          ('LoanRepository\n(JpaRepository)', 11.0, 4.18)]),
-        (2.0, 1.2, 'COUCHE DOMAINE\n(Entity / DTO)', (0.5,0.2,0.6),
-         [('Client\n@Entity', 2.5, 2.58),
-          ('ClientRequest\n(DTO)', 4.5, 2.58),
-          ('AccountEntity\n@Entity', 7.0, 2.58),
-          ('LoanEntity\n@Entity', 11.0, 2.58)]),
-    ]
-
-    for (y_bot, h, layer_label, col, elements) in layers:
-        # Fond de bande
-        ax.add_patch(FancyBboxPatch((0.1, y_bot), 13.8, h, boxstyle="round,pad=0.05",
-                     facecolor=(*col, 0.08), edgecolor=col, lw=2))
-        # Label couche à gauche
-        ax.text(0.55, y_bot + h/2, layer_label, ha='center', va='center',
-                fontsize=7.5, fontweight='bold', color=col, rotation=0,
-                bbox=dict(boxstyle='round,pad=0.3', facecolor=(*col, 0.15),
-                          edgecolor=col, lw=1))
-        # Boites dans la couche
-        for (elem_label, ex, ey) in elements:
-            bw, bh = 2.2, 0.7
-            ax.add_patch(FancyBboxPatch((ex - bw/2, ey - bh/2), bw, bh,
-                         boxstyle="round,pad=0.06",
-                         facecolor=(*col, 0.2), edgecolor=col, lw=1.3))
-            ax.text(ex, ey, elem_label, ha='center', va='center',
-                    fontsize=7.5, fontweight='bold', color=col)
-
-    # Flèches entre couches (dépendances)
-    arrow_xs = [3.0, 7.0, 11.0]
-    layer_ys = [(8.0, 6.95), (6.4, 5.85), (4.8, 4.75)]
-    for x_arr in arrow_xs:
-        for (y_from, y_to) in layer_ys:
-            ax.annotate('', xy=(x_arr, y_to), xytext=(x_arr, y_from),
-                arrowprops=dict(arrowstyle='->', color='#888888', lw=1.5))
-
-    # Éléments transverses (droite)
-    transverses = [
-        (12.0, 7.25, 'SecurityConfig\n(Spring Security)', (0.7,0.1,0.1)),
-        (12.0, 5.75, 'FeignClient\n(Inter-services)', (0.4,0.1,0.6)),
-        (12.0, 4.18, 'GlobalException\nHandler', (0.3,0.3,0.3)),
-    ]
-    for (tx, ty, tlabel, tcol) in transverses:
-        ax.add_patch(FancyBboxPatch((tx - 1.0, ty - 0.38), 2.0, 0.76,
-                     boxstyle="round,pad=0.06",
-                     facecolor=(*tcol, 0.15), edgecolor=tcol, lw=1.2, linestyle='--'))
-        ax.text(tx, ty, tlabel, ha='center', va='center',
-                fontsize=7, color=tcol)
-
-    # Base de données en bas
-    ax.add_patch(FancyBboxPatch((4.5, 0.5), 5.0, 1.0, boxstyle="round,pad=0.08",
-                 facecolor=(0.3,0.5,0.8,0.15), edgecolor=(0.3,0.5,0.8), lw=2))
-    ax.text(7.0, 1.0, 'PostgreSQL — Base de donnees du service',
-            ha='center', va='center', fontsize=9, fontweight='bold', color=(0.3,0.5,0.8))
-    # Flèche Repository → DB
-    ax.annotate('', xy=(7.0, 1.5), xytext=(7.0, 2.0),
-        arrowprops=dict(arrowstyle='->', color=(0.3,0.5,0.8), lw=1.5))
-
-    # Légende
-    legend_items = [
-        (BLEU, 'Controller — reçoit les requetes HTTP, retourne les reponses'),
-        (VERT, 'Service — logique metier, regles de gestion'),
-        (ORANGE, 'Repository — accès base de donnees (Spring Data JPA)'),
-        ((0.5,0.2,0.6), 'Entity/DTO — modele de donnees et objets de transfert'),
-    ]
-    for i, (lcol, ltext) in enumerate(legend_items):
-        lx, ly = 0.3, 1.7 - i * 0.3
-        ax.add_patch(plt.Rectangle((lx, ly-0.1), 0.25, 0.2, color=lcol, alpha=0.7))
-        ax.text(lx + 0.35, ly, ltext, va='center', fontsize=6.5, color='#444444')
-
-    return fig_to_stream(fig)
+    return draw_classes_auth_service()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # DIAGRAMME 9 : États/transitions d'un compte bancaire — NOUVEAU
@@ -1326,28 +1635,62 @@ def make_report():
 
     doc.add_page_break()
 
-    # 5.5 Classes
-    add_heading(doc, '5.5 Diagramme de Classes — Entites Principales', 2)
+    # 5.5 Classes — diagramme global
+    add_heading(doc, '5.5 Diagramme de Classes Global', 2)
     add_para(doc,
-        "Ce diagramme presente les entites metier principales et leurs relations. "
-        "Chaque entite est geree par son microservice dedie et possede sa propre "
-        "base de donnees PostgreSQL (pattern Database per Service).")
-    print("  -> Generation Diagramme de Classes...")
+        "Ce diagramme regroupe la totalite des entites metier de tous les microservices. "
+        "Chaque zone coloree correspond a un service avec sa propre base de donnees PostgreSQL "
+        "(pattern Database per Service). Les references cross-services utilisent des IDs "
+        "simples (String/Long) plutot que des jointures JPA.")
+    print("  -> Generation Diagramme de Classes Global...")
     add_image(doc, draw_classes(), 6.5,
-              'Figure 7 — Diagramme de Classes Principales')
+              'Figure 7 — Diagramme de Classes Global (10 microservices)')
 
     doc.add_page_break()
 
-    # 5.6 Architecture par couche (NOUVEAU)
-    add_heading(doc, '5.6 Architecture par Couche — Service Typique', 2)
+    # 5.6 Diagrammes par service
+    add_heading(doc, '5.6 Diagrammes de Classes par Service', 2)
     add_para(doc,
-        "Ce diagramme illustre l'organisation interne de chaque microservice selon "
-        "le pattern en couches : Controller (presentation), Service (logique metier), "
-        "Repository (persistance JPA) et Entity/DTO (domaine). Les composants transverses "
-        "(SecurityConfig, FeignClient, GlobalExceptionHandler) sont communs a tous les services.")
-    print("  -> Generation Architecture par Couche...")
-    add_image(doc, draw_classes_par_service(), 6.5,
-              'Figure 8 — Architecture en Couches (service typique)')
+        "Les diagrammes suivants detaillent les entites (avec tous les attributs) "
+        "et les enumerations de chaque microservice.")
+
+    svc_diagrams = [
+        ('5.6.1 auth-service (:8080)',
+         draw_classes_auth_service,
+         'Figure 8a — auth-service : User, Role, Privilege, RefreshToken, UserSession, AuditLog, PasswordResetToken'),
+        ('5.6.2 client-service (:8081)',
+         draw_classes_client_service,
+         'Figure 8b — client-service : Client, Document'),
+        ('5.6.3 account-service (:8082)',
+         draw_classes_account_service,
+         'Figure 8c — account-service : Compte'),
+        ('5.6.4 agency-service (:8086)',
+         draw_classes_agency_service,
+         'Figure 8d — agency-service : Agency, AgentAssignment, AgencyStats, AgencyConfiguration'),
+        ('5.6.5 loan-service (:8083)',
+         draw_classes_loan_service,
+         'Figure 8e — loan-service : LoanProduct, LoanApplication, Loan, AmortizationSchedule, Schedule'),
+        ('5.6.6 repayment-service (:8084)',
+         draw_classes_repayment_service,
+         'Figure 8f — repayment-service : Repayment, Payment, Schedule, Penalty'),
+        ('5.6.7 transaction-service (:8088)',
+         draw_classes_transaction_service,
+         'Figure 8g — transaction-service : Transaction'),
+        ('5.6.8 notification-service (:8089)',
+         draw_classes_notification_service,
+         'Figure 8h — notification-service : Notification, NotificationTemplate'),
+        ('5.6.9 reporting-service (:8085)',
+         draw_classes_reporting_service,
+         'Figure 8i — reporting-service : Report, Kpi'),
+        ('5.6.10 configuration-service (:8087)',
+         draw_classes_configuration_service,
+         'Figure 8j — configuration-service : MicrofinanceConfiguration, AccountCategory, AccountTypeConfiguration'),
+    ]
+    for (title, fn, caption) in svc_diagrams:
+        add_heading(doc, title, 3)
+        print(f'  -> Generation {title}...')
+        add_image(doc, fn(), 6.5, caption)
+        doc.add_page_break()
 
     doc.add_page_break()
 

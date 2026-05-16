@@ -42,7 +42,6 @@ public class AmortizationService {
             BigDecimal principalAmount = loan.getMonthlyPayment().subtract(interestAmount);
             
             if (i == loan.getTermMonths()) {
-                //  mois: ajuster pour que le solde soit zéro
                 principalAmount = remainingBalance;
             }
             
